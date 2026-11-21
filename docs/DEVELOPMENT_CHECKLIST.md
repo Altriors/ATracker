@@ -28,7 +28,7 @@ new GitHub repo through the web UI, and Actions builds the APK. Errors then have
 - [x] Inspect build environment
 - [x] GitHub linked, repo Altriors/ATracker created, push access verified
 - [ ] Phase 0: Architecture, provider feasibility and DB schema docs
-- [~] Phase 1: Project foundation, Room database (v1 written; awaiting first green CI build)
+- [x] Phase 1: Project foundation, Room database v1, repositories, ownership tests (CI green, APK published)
 - [ ] Phase 2: Providers (AniList, Jikan, MangaDex, manual entry) and catalogue cache
 - [ ] Phase 3: Library and progress tracking
 - [ ] Phase 4: Franchises
