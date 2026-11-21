@@ -1,0 +1,14 @@
+name: Probe metadata providers
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - scripts/probe-providers.sh
+      - .github/workflows/probe-providers.yml
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./scripts/probe-providers.sh
