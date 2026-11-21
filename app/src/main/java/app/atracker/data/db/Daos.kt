@@ -130,7 +130,7 @@ interface ActivityDao {
     suspend fun allForMedia(mediaId: Long): List<ActivityEventEntity>
 
     @Query("UPDATE activity_event SET voidedAt = :at WHERE id = :id")
-    suspend fun void(id: Long, at: Long?)
+    suspend fun setVoided(id: Long, at: Long?)
 }
 
 @Dao

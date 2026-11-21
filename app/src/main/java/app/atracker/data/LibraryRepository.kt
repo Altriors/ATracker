@@ -174,7 +174,7 @@ class LibraryRepository(
 
     /** Voids an event so statistics ignore it. Current progress is never changed by this. */
     suspend fun voidEvent(eventId: Long, voided: Boolean = true) {
-        activity.void(eventId, if (voided) clock() else null)
+        activity.setVoided(eventId, if (voided) clock() else null)
     }
 
     private suspend fun log(
