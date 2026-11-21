@@ -1,31 +1,22 @@
 #!/bin/bash
-# Probes the real metadata APIs with sample titles. Runs in CI only (the dev sandbox has no access).
+# Round 2: web-novel coverage, AniList novel filter, Wikidata, Open Library, Jikan retry.
 UA="ATracker-personal/0.1 (probe)"
-anilist() { # $1=search $2=type(ANIME|MANGA)
-  curl -s -m 30 https://graphql.anilist.co -H 'Content-Type: application/json' -H "User-Agent: $UA" \
-   -d "$(jq -nc --arg q "$1" --arg t "$2" '{query:"query($q:String,$t:MediaType){Page(perPage:4){media(search:$q,type:$t){id format countryOfOrigin status chapters volumes episodes startDate{year} title{romaji english native} relations{edges{relationType node{id type format title{romaji}}}}}}}",variables:{q:$q,t:$t}}')" \
-  | jq -r '.errors // (.data.Page.media[] | "  AL#\(.id) \(.title.romaji) | \(.title.english) | fmt=\(.format) cc=\(.countryOfOrigin) st=\(.status) ch=\(.chapters) vol=\(.volumes) ep=\(.episodes) yr=\(.startDate.year) rel=\(.relations.edges|length)")' 2>&1 | head -6
-}
-jikan() { # $1=q $2=endpoint(anime|manga)
-  curl -s -m 30 -A "$UA" "https://api.jikan.moe/v4/$2?q=$(jq -rn --arg q "$1" '$q|@uri')&limit=3" \
-  | jq -r '(.data // [])[] | "  MAL#\(.mal_id) \(.title) | type=\(.type) st=\(.status) ch=\(.chapters) vol=\(.volumes) ep=\(.episodes)"' 2>&1 | head -4
-  sleep 1.2
-}
-mangadex() {
-  curl -s -m 30 -A "$UA" -G "https://api.mangadex.org/manga" --data-urlencode "title=$1" --data-urlencode "limit=3" --data-urlencode "includes[]=cover_art" \
-  | jq -r '(.data // [])[] | "  MD#\(.id[0:8]) \(.attributes.title|to_entries[0].value) | lang=\(.attributes.originalLanguage) st=\(.attributes.status) lastCh=\(.attributes.lastChapter) lastVol=\(.attributes.lastVolume) cover=\([.relationships[]|select(.type=="cover_art")|.attributes.fileName][0])"' 2>&1 | head -4
-}
-echo "### reachability"
-for u in https://graphql.anilist.co https://api.jikan.moe/v4/anime/1 https://api.mangadex.org/ping https://uploads.mangadex.org https://openlibrary.org https://www.googleapis.com/books/v1/volumes?q=test; do
-  printf "%s -> " "$u"; curl -s -o /dev/null -m 20 -w "%{http_code}\n" -A "$UA" "$u"; done
-for t in "Reverend Insanity" "Lord of the Mysteries" "Omniscient Reader" "Tower of God" "Eleceed" "Mushoku Tensei" "Kino no Tabi" "Boogiepop" "Spice and Wolf" "Frieren"; do
-  echo; echo "=== $t"
-  echo " anilist ANIME:"; anilist "$t" ANIME
-  echo " anilist MANGA(+novels/manhwa/manhua):"; anilist "$t" MANGA
-  echo " jikan manga:"; jikan "$t" manga
-  echo " mangadex:"; mangadex "$t"
+al() { curl -s -m 30 https://graphql.anilist.co -H 'Content-Type: application/json' -H "User-Agent: $UA" \
+  -d "$(jq -nc --arg q "$1" --arg cc "$2" '{query:"query($q:String,$cc:CountryCode){Page(perPage:5){media(search:$q,type:MANGA,format:NOVEL,countryOfOrigin:$cc){id idMal format countryOfOrigin status chapters volumes title{romaji english} startDate{year} staff(perPage:2){edges{role node{name{full}}}} relations{edges{relationType node{id type format title{romaji}}}}}}}",variables:{q:$q,cc:(if $cc=="" then null else $cc end)}}')" \
+  | jq -r '.errors // (.data.Page.media[] | "  AL#\(.id) mal=\(.idMal) \(.title.romaji) | \(.title.english) | \(.format) \(.countryOfOrigin) \(.status) ch=\(.chapters) vol=\(.volumes) staff=\([.staff.edges[]?|.node.name.full]|join("/")) rel=\([.relations.edges[]?|.relationType+":"+.node.format]|join(","))")' 2>&1 | head -6; }
+echo "### AniList NOVEL-only, CN/KR web novels"
+for t in "Reverend Insanity" "Gu Zhenren" "Guimi Zhi Zhu" "Lord of the Mysteries" "Omniscient Reader" "Solo Leveling" "Circle of Inevitability" "Release That Witch" "Coiling Dragon" "Overgeared" "The Beginning After the End" "Shadow Slave" "Trash of the Count" ; do echo "== $t"; al "$t" ""; done
+echo "### Wikidata"
+for t in "Lord of the Mysteries" "Reverend Insanity"; do
+ echo "== $t"; curl -s -m 30 -A "$UA" -G "https://www.wikidata.org/w/api.php" --data-urlencode "action=wbsearchentities" --data-urlencode "search=$t" --data-urlencode "language=en" --data-urlencode "format=json" --data-urlencode "limit=4" | jq -r '.search[]? | "  \(.id) \(.label) - \(.description)"'
 done
-echo; echo "### anilist airing schedule + popular sample"
-curl -s -m 30 https://graphql.anilist.co -H 'Content-Type: application/json' -d '{"query":"{Page(perPage:3){media(type:ANIME,status:RELEASING,sort:POPULARITY_DESC){id title{romaji} nextAiringEpisode{episode airingAt}}}}"}' | jq -c '.data.Page.media[]?' | head -3
-echo "### openlibrary sample"; curl -s -m 20 "https://openlibrary.org/search.json?q=sword+art+online&limit=2&fields=key,title,author_name,first_publish_year" | jq -c '.docs[]?' | head -2
-echo "### google books sample"; curl -s -m 20 "https://www.googleapis.com/books/v1/volumes?q=intitle:overlord+light+novel&maxResults=2" | jq -c '(.items // [])[] | {t:.volumeInfo.title,a:.volumeInfo.authors}' | head -2
+echo "### Open Library"
+for t in "Lord of the Mysteries" "Reverend Insanity" "Overlord Maruyama" "Sword Art Online"; do echo "== $t"; curl -s -m 25 -A "$UA" -G "https://openlibrary.org/search.json" --data-urlencode "q=$t" --data-urlencode "limit=3" --data-urlencode "fields=key,title,author_name,first_publish_year,cover_i" | jq -c '.docs[]?' | head -3; done
+echo "### Google Books (may be rate limited without key)"
+curl -s -m 25 -A "$UA" -G "https://www.googleapis.com/books/v1/volumes" --data-urlencode "q=intitle:Overlord" --data-urlencode "maxResults=2" | head -c 300; echo
+echo "### Jikan retry"
+for u in https://api.jikan.moe/v4/manga?q=overlord\&limit=2 https://api.jikan.moe/v4/anime/1; do printf "%s -> " "$u"; curl -s -o /dev/null -m 40 -w "%{http_code} %{time_total}s\n" -A "$UA" "$u"; done
+echo "### AniList idMal + MAL cover test"
+curl -s -m 30 https://graphql.anilist.co -H 'Content-Type: application/json' -d '{"query":"{Media(id:125291){id idMal coverImage{large extraLarge} bannerImage description(asHtml:false) genres tags{name rank isMediaSpoiler} averageScore meanScore siteUrl synonyms}}"}' | jq -c '.data.Media | {id,idMal,cover:.coverImage.large,gen:.genres,score:.averageScore,syn:.synonyms,tags:[.tags[0:3][]|.name]}'
+echo "### AniList rate-limit headers"
+curl -s -D - -o /dev/null -m 20 https://graphql.anilist.co -H 'Content-Type: application/json' -d '{"query":"{Media(id:1){id}}"}' | grep -i -E "^(HTTP|x-ratelimit)"
