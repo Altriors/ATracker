@@ -1,0 +1,11 @@
+fragment M on Media {
+  id idMal type format status countryOfOrigin chapters volumes episodes duration
+  description(asHtml: false) genres synonyms averageScore siteUrl isAdult
+  coverImage { large extraLarge }
+  startDate { year month day } endDate { year month day }
+  title { romaji english native }
+  studios(isMain: true) { nodes { name } }
+  staff(perPage: 6, sort: RELEVANCE) { edges { role node { name { full } } } }
+  relations { edges { relationType node { id type format countryOfOrigin title { romaji english } } } }
+  nextAiringEpisode { episode airingAt }
+}

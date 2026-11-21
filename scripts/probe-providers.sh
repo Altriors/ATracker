@@ -1,22 +1,22 @@
 #!/bin/bash
-# Round 2: web-novel coverage, AniList novel filter, Wikidata, Open Library, Jikan retry.
+# Round 3: capture real response shapes using the exact queries the app uses.
 UA="ATracker-personal/0.1 (probe)"
-al() { curl -s -m 30 https://graphql.anilist.co -H 'Content-Type: application/json' -H "User-Agent: $UA" \
-  -d "$(jq -nc --arg q "$1" --arg cc "$2" '{query:"query($q:String,$cc:CountryCode){Page(perPage:5){media(search:$q,type:MANGA,format:NOVEL,countryOfOrigin:$cc){id idMal format countryOfOrigin status chapters volumes title{romaji english} startDate{year} staff(perPage:2){edges{role node{name{full}}}} relations{edges{relationType node{id type format title{romaji}}}}}}}",variables:{q:$q,cc:(if $cc=="" then null else $cc end)}}')" \
-  | jq -r '.errors // (.data.Page.media[] | "  AL#\(.id) mal=\(.idMal) \(.title.romaji) | \(.title.english) | \(.format) \(.countryOfOrigin) \(.status) ch=\(.chapters) vol=\(.volumes) staff=\([.staff.edges[]?|.node.name.full]|join("/")) rel=\([.relations.edges[]?|.relationType+":"+.node.format]|join(","))")' 2>&1 | head -6; }
-echo "### AniList NOVEL-only, CN/KR web novels"
-for t in "Reverend Insanity" "Gu Zhenren" "Guimi Zhi Zhu" "Lord of the Mysteries" "Omniscient Reader" "Solo Leveling" "Circle of Inevitability" "Release That Witch" "Coiling Dragon" "Overgeared" "The Beginning After the End" "Shadow Slave" "Trash of the Count" ; do echo "== $t"; al "$t" ""; done
-echo "### Wikidata"
-for t in "Lord of the Mysteries" "Reverend Insanity"; do
- echo "== $t"; curl -s -m 30 -A "$UA" -G "https://www.wikidata.org/w/api.php" --data-urlencode "action=wbsearchentities" --data-urlencode "search=$t" --data-urlencode "language=en" --data-urlencode "format=json" --data-urlencode "limit=4" | jq -r '.search[]? | "  \(.id) \(.label) - \(.description)"'
-done
-echo "### Open Library"
-for t in "Lord of the Mysteries" "Reverend Insanity" "Overlord Maruyama" "Sword Art Online"; do echo "== $t"; curl -s -m 25 -A "$UA" -G "https://openlibrary.org/search.json" --data-urlencode "q=$t" --data-urlencode "limit=3" --data-urlencode "fields=key,title,author_name,first_publish_year,cover_i" | jq -c '.docs[]?' | head -3; done
-echo "### Google Books (may be rate limited without key)"
-curl -s -m 25 -A "$UA" -G "https://www.googleapis.com/books/v1/volumes" --data-urlencode "q=intitle:Overlord" --data-urlencode "maxResults=2" | head -c 300; echo
-echo "### Jikan retry"
-for u in https://api.jikan.moe/v4/manga?q=overlord\&limit=2 https://api.jikan.moe/v4/anime/1; do printf "%s -> " "$u"; curl -s -o /dev/null -m 40 -w "%{http_code} %{time_total}s\n" -A "$UA" "$u"; done
-echo "### AniList idMal + MAL cover test"
-curl -s -m 30 https://graphql.anilist.co -H 'Content-Type: application/json' -d '{"query":"{Media(id:125291){id idMal coverImage{large extraLarge} bannerImage description(asHtml:false) genres tags{name rank isMediaSpoiler} averageScore meanScore siteUrl synonyms}}"}' | jq -c '.data.Media | {id,idMal,cover:.coverImage.large,gen:.genres,score:.averageScore,syn:.synonyms,tags:[.tags[0:3][]|.name]}'
-echo "### AniList rate-limit headers"
-curl -s -D - -o /dev/null -m 20 https://graphql.anilist.co -H 'Content-Type: application/json' -d '{"query":"{Media(id:1){id}}"}' | grep -i -E "^(HTTP|x-ratelimit)"
+FRAG=$(cat scripts/queries/anilist_media.graphql)
+gql() { curl -s -m 30 https://graphql.anilist.co -H 'Content-Type: application/json' -H "User-Agent: $UA" -d "$(jq -nc --arg q "$1" --argjson v "$2" '{query:$q,variables:$v}')"; }
+trim() { jq -c 'walk(if type=="string" and length>90 then .[0:90]+"…" else . end)'; }
+echo "### ANILIST SEARCH (Lord of the Mysteries, MANGA)"
+gql "$FRAG query(\$q:String,\$type:MediaType){Page(page:1,perPage:2){pageInfo{hasNextPage} media(search:\$q,type:\$type,isAdult:false,sort:SEARCH_MATCH){...M}}}" '{"q":"Lord of the Mysteries","type":"MANGA"}' | trim
+echo "### ANILIST DETAIL anime airing (Lord of Mysteries ONA 137667)"
+gql "$FRAG query(\$id:Int){Media(id:\$id){...M}}" '{"id":137667}' | trim
+echo "### ANILIST NOVEL format search (no country filter)"
+for t in "Solo Leveling" "Lord of the Mysteries" "Omniscient Reader"; do echo "== $t"; gql "query(\$q:String){Page(perPage:5){media(search:\$q,type:MANGA,format:NOVEL){id format countryOfOrigin title{romaji english}}}}" "{\"q\":\"$t\"}" | trim; done
+echo "### ANILIST popular manhwa"
+gql "$FRAG query{Page(page:1,perPage:2){media(type:MANGA,countryOfOrigin:KR,isAdult:false,sort:POPULARITY_DESC){...M}}}" '{}' | trim
+echo "### MANGADEX SEARCH (Reverend Insanity)"
+curl -s -m 30 -A "$UA" -G "https://api.mangadex.org/manga" --data-urlencode "title=Reverend Insanity" --data-urlencode "limit=2" --data-urlencode "includes[]=cover_art" --data-urlencode "includes[]=author" --data-urlencode "includes[]=artist" --data-urlencode "contentRating[]=safe" --data-urlencode "contentRating[]=suggestive" | trim
+echo "### WIKIDATA ENTITY (Lord of Mysteries Q109342457)"
+curl -s -m 30 -A "$UA" -G "https://www.wikidata.org/w/api.php" --data-urlencode "action=wbgetentities" --data-urlencode "ids=Q109342457|Q137441819" --data-urlencode "props=labels|descriptions|claims|aliases|sitelinks/urls" --data-urlencode "languages=en" --data-urlencode "format=json" | jq -c '.entities | map_values({label:.labels.en.value, desc:.descriptions.en.value, aliases:[.aliases.en[]?.value], claims:(.claims|to_entries|map({(.key):(.value[0].mainsnak.datavalue.value|if type=="object" then (.id // .time // .amount // .text // "obj") else . end)})|add), sitelinks:(.sitelinks|keys|length)})'
+echo "### WIKIDATA ENTITY LABELS"
+curl -s -m 30 -A "$UA" -G "https://www.wikidata.org/w/api.php" --data-urlencode "action=wbgetentities" --data-urlencode "ids=Q8261|Q7725634" --data-urlencode "props=labels" --data-urlencode "languages=en" --data-urlencode "format=json" | jq -c '.entities|map_values(.labels.en.value)'
+echo "### MANGADEX rate/headers"
+curl -s -D - -o /dev/null -m 20 -A "$UA" "https://api.mangadex.org/ping" | grep -i -E "^(HTTP|x-ratelimit)"
