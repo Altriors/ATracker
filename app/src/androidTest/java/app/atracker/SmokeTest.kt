@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.printToString
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
@@ -40,6 +41,7 @@ class SmokeTest {
             runFlow()
         } catch (t: Throwable) {
             runCatching { shot("99-failure") }
+            runCatching { android.util.Log.e("SMOKE", "SCREEN TREE:\n" + rule.onRoot().printToString(maxDepth = 12)) }
             throw t
         }
     }

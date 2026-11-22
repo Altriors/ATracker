@@ -7,5 +7,6 @@ adb shell am instrument -w -e class app.atracker.SmokeTest app.atracker.test/and
 adb shell "run-as app.atracker tar c -C files shots" 2>/dev/null | tar x -C build/emulator-out 2>&1 | tail -2
 adb logcat -d -t 4000 > build/emulator-out/logcat.txt 2>&1
 adb logcat -d -b crash > build/emulator-out/crash.txt 2>&1
+grep -A400 "SMOKE" build/emulator-out/logcat.txt | cut -c1-220 | head -150
 ls -la build/emulator-out/shots 2>&1 | tail -12
 if grep -q "^OK (" build/emulator-out/instrument.txt; then exit 0; else exit 1; fi

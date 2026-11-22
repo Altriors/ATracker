@@ -127,7 +127,7 @@ fun <T> Picker(
     var open by remember { mutableStateOf(false) }
     Box(modifier) {
         TextButton(onClick = { open = true }) {
-            Text(if (selected == null) label else "$label: ${display(selected)}", maxLines = 1)
+            Text(if (selected == null) label else if (label.isBlank()) display(selected) else "$label: ${display(selected)}", maxLines = 1)
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             if (anyLabel != null) DropdownMenuItem(text = { Text(anyLabel) }, onClick = { open = false; onSelect(null) })
