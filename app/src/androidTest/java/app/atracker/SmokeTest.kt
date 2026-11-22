@@ -4,11 +4,11 @@ import android.graphics.Bitmap
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
-import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -28,7 +28,7 @@ class SmokeTest {
     @get:Rule val rule = createAndroidComposeRule<MainActivity>()
 
     private fun shot(name: String) {
-        val dir = InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir("shots") ?: return
+        val dir = InstrumentationRegistry.getInstrumentation().targetContext.filesDir.resolve("shots")
         dir.mkdirs()
         val bmp = rule.onRoot().captureToImage().asAndroidBitmap()
         FileOutputStream(File(dir, "$name.png")).use { bmp.compress(Bitmap.CompressFormat.PNG, 90, it) }
@@ -36,17 +36,29 @@ class SmokeTest {
 
     @Test
     fun manualTitleFlow() {
+        try {
+            runFlow()
+        } catch (t: Throwable) {
+            runCatching { shot("99-failure") }
+            throw t
+        }
+    }
+
+    private fun runFlow() {
         rule.waitForIdle()
         rule.onNodeWithText("Welcome to ATracker").assertIsDisplayed()
         shot("01-home-empty")
 
         rule.onAllNodesWithText("Discover").onFirst().performClick()
-        // Wait until the initial online browse finished (success or error), then the manual button shows.
-        rule.waitUntil(timeoutMillis = 60_000) {
-            rule.onAllNodesWithText("Add a title manually").fetchSemanticsNodes().isNotEmpty() ||
-                rule.onAllNodes(hasScrollAction()).fetchSemanticsNodes().isNotEmpty()
+        // The manual button only appears once the initial online browse has finished (success or error).
+        rule.waitUntil(timeoutMillis = 90_000) {
+            try {
+                rule.onNodeWithTag("discover-list").performScrollToNode(hasText("Add a title manually"))
+                true
+            } catch (e: AssertionError) {
+                false
+            }
         }
-        rule.onNode(hasScrollAction()).performScrollToNode(hasText("Add a title manually"))
         shot("02-discover")
         rule.onNodeWithText("Add a title manually").performClick()
 

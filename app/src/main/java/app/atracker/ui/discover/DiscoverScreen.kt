@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import app.atracker.ATrackerApp
@@ -51,7 +52,7 @@ fun DiscoverScreen(app: ATrackerApp, onOpen: (Long) -> Unit, onManual: (String) 
     val scope = rememberCoroutineScope()
     var openError by remember { mutableStateOf<String?>(null) }
 
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag("discover-list"), contentPadding = PaddingValues(bottom = 24.dp)) {
         item {
             OutlinedTextField(
                 value = state.query,
