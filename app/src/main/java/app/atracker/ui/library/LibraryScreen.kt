@@ -58,7 +58,7 @@ import app.atracker.ui.common.vm
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LibraryScreen(app: ATrackerApp, onOpen: (Long) -> Unit, onDiscover: () -> Unit) {
+fun LibraryScreen(app: ATrackerApp, onOpen: (Long) -> Unit, onDiscover: () -> Unit, onFranchises: () -> Unit) {
     val model = vm { LibraryViewModel(app) }
     val items by model.items.collectAsState()
     val filters by model.filters.collectAsState()
@@ -75,6 +75,7 @@ fun LibraryScreen(app: ATrackerApp, onOpen: (Long) -> Unit, onDiscover: () -> Un
                 modifier = Modifier.weight(1f), singleLine = true, placeholder = { Text("Search your library") },
                 leadingIcon = { Icon(Icons.Filled.Search, null) }
             )
+            androidx.compose.material3.TextButton(onClick = onFranchises) { Text("Franchises") }
             IconButton(onClick = { grid = !grid }) {
                 Icon(if (grid) Icons.AutoMirrored.Filled.ViewList else Icons.Filled.GridView, if (grid) "List view" else "Grid view")
             }

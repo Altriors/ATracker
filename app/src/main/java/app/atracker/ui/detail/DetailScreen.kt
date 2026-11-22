@@ -70,7 +70,10 @@ import app.atracker.ui.common.vm
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DetailScreen(app: ATrackerApp, mediaId: Long, onBack: () -> Unit, onEditManual: (Long) -> Unit) {
+fun DetailScreen(
+    app: ATrackerApp, mediaId: Long, onBack: () -> Unit, onEditManual: (Long) -> Unit,
+    onOpenTitle: (Long) -> Unit, onOpenFranchise: (Long) -> Unit
+) {
     val model = vm(key = "detail-$mediaId") { DetailViewModel(app, mediaId) }
     val media by model.media.collectAsState()
     val entry by model.entry.collectAsState()
@@ -116,6 +119,7 @@ fun DetailScreen(app: ATrackerApp, mediaId: Long, onBack: () -> Unit, onEditManu
             Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(bottom = 32.dp)) {
                 Header(model, m)
                 TrackingCard(model, m, entry)
+                FranchiseSection(model, onOpenTitle, onOpenFranchise)
                 InfoSection(model, m)
             }
         }

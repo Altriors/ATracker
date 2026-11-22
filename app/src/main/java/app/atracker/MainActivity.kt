@@ -34,6 +34,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import app.atracker.ui.detail.DetailScreen
+import app.atracker.ui.franchise.FranchiseListScreen
+import app.atracker.ui.franchise.FranchiseScreen
 import app.atracker.ui.discover.DiscoverScreen
 import app.atracker.ui.home.HomeScreen
 import app.atracker.ui.library.LibraryScreen
@@ -94,12 +96,22 @@ private fun AppRoot(app: ATrackerApp) {
         NavHost(nav, startDestination = Tab.HOME.route, modifier = Modifier.padding(if (showBar) padding else PaddingValues(0.dp)).fillMaxSize()) {
             composable(Tab.HOME.route) { HomeScreen(app, ::openDetail) { goTab(Tab.DISCOVER) } }
             composable(Tab.DISCOVER.route) { DiscoverScreen(app, ::openDetail, ::openManual) }
-            composable(Tab.LIBRARY.route) { LibraryScreen(app, ::openDetail) { goTab(Tab.DISCOVER) } }
+            composable(Tab.LIBRARY.route) { LibraryScreen(app, ::openDetail, onDiscover = { goTab(Tab.DISCOVER) }, onFranchises = { nav.navigate("franchises") }) }
             composable(Tab.STATS.route) { ComingSoon("Statistics") }
             composable(Tab.SETTINGS.route) { ComingSoon("Settings") }
             composable("detail/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
                 val id = entry.arguments?.getLong("id") ?: return@composable
-                DetailScreen(app, id, onBack = { nav.popBackStack() }, onEditManual = { nav.navigate("manual?title=&id=$it") })
+                DetailScreen(
+                    app, id, onBack = { nav.popBackStack() }, onEditManual = { nav.navigate("manual?title=&id=$it") },
+                    onOpenTitle = ::openDetail, onOpenFranchise = { nav.navigate("franchise/$it") }
+                )
+            }
+            composable("franchises") {
+                FranchiseListScreen(app, onBack = { nav.popBackStack() }, onOpen = { nav.navigate("franchise/$it") })
+            }
+            composable("franchise/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
+                val id = entry.arguments?.getLong("id") ?: return@composable
+                FranchiseScreen(app, id, onBack = { nav.popBackStack() }, onOpenTitle = ::openDetail)
             }
             composable(
                 "manual?title={title}&id={id}",
