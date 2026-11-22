@@ -67,7 +67,7 @@ class LibraryFilterTest {
 }
 
 class DiscoverFilterTest {
-    private fun m(t: String, y: Int?, s: Int?, g: List<String>, st: app.atracker.domain.PublicationStatus = app.atracker.domain.PublicationStatus.FINISHED) =
+    private fun m(t: String, y: Int?, s: Int?, g: List<String>, st: app.atracker.domain.PublicationStatus = app.atracker.domain.PublicationStatus.COMPLETED) =
         app.atracker.domain.MediaMetadata(
             provider = "anilist", externalId = t, mediaType = app.atracker.domain.MediaType.MANGA, title = t,
             startYear = y, averageScore = s, genres = g, pubStatus = st
