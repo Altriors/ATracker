@@ -16,7 +16,7 @@ jobs:
       # Commit 4d61105 still has database version 1, so building it produces the real v1 schema JSON.
       - uses: actions/checkout@v4
         with:
-          ref: 4d61105
+          ref: 4d61105ebf7a385cb920f44bf6034613091bbea8
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
