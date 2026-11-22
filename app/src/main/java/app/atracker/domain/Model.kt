@@ -74,5 +74,6 @@ object Providers {
     const val ANILIST = "anilist"
     const val JIKAN = "jikan"
     const val MANGADEX = "mangadex"
+    const val WIKIDATA = "wikidata"
     const val MANUAL = "manual"
 }

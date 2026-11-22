@@ -84,6 +84,18 @@ interface MediaDao {
     @Query("SELECT COUNT(*) FROM media")
     suspend fun count(): Int
 
+    @Query("DELETE FROM release_info WHERE mediaId = :mediaId AND source = :source")
+    suspend fun clearReleases(mediaId: Long, source: String)
+
+    @Insert
+    suspend fun insertReleases(releases: List<ReleaseInfoEntity>)
+
+    @Query("SELECT * FROM release_info WHERE mediaId = :mediaId ORDER BY releaseAt")
+    suspend fun releasesFor(mediaId: Long): List<ReleaseInfoEntity>
+
+    @Query("SELECT * FROM release_info WHERE releaseAt >= :from AND releaseAt < :to ORDER BY releaseAt")
+    fun observeReleases(from: Long, to: Long): Flow<List<ReleaseInfoEntity>>
+
     /** Cache clean-up: only removes catalogue rows that the user has never added to the library. */
     @Query(
         """DELETE FROM media WHERE id NOT IN (SELECT mediaId FROM library_entry)
