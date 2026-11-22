@@ -42,7 +42,9 @@ import app.atracker.ui.common.EmptyState
 import app.atracker.ui.common.MediaRow
 import app.atracker.ui.common.subtitle
 import app.atracker.ui.common.vm
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,7 +104,10 @@ fun DiscoverScreen(app: ATrackerApp, onOpen: (Long) -> Unit, onManual: (String) 
                     MediaRow(m.title, m.subtitle(), m.coverUrl, badge = "via ${providerName(m.provider)}") {
                         scope.launch {
                             openError = null
-                            try { onOpen(model.open(m)) } catch (e: Exception) { openError = "Could not open title: ${e.message}" }
+                            try {
+                                val id = model.open(m)
+                                withContext(Dispatchers.Main.immediate) { onOpen(id) }
+                            } catch (e: Exception) { openError = "Could not open title: ${e.message}" }
                         }
                     }
                 }

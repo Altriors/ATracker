@@ -44,7 +44,9 @@ import app.atracker.domain.ProgressUnit
 import app.atracker.domain.Providers
 import app.atracker.domain.PublicationStatus
 import app.atracker.ui.common.Picker
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Creates or edits a hand-entered title. Every field except the title is optional and left
@@ -172,7 +174,7 @@ fun ManualEntryScreen(app: ATrackerApp, editId: Long?, prefillTitle: String, onB
                             val id = if (editId == null) app.mediaRepository.createManual(meta).also {
                                 if (addToLibrary) app.libraryRepository.addToLibrary(it, LibraryStatus.PLANNED)
                             } else editId.also { app.mediaRepository.updateManual(it, meta) }
-                            onSaved(id)
+                            withContext(Dispatchers.Main.immediate) { onSaved(id) }
                         } catch (e: Exception) {
                             error = "Could not save: ${e.message}"
                         }
