@@ -44,10 +44,10 @@ Coverage limits: only what these sources hold can be discovered. Web novels beyo
 - [x] Phase 3: library + progress. Data layer + filter logic unit-tested (14 tests); UI verified on an emulator (manual entry -> detail -> +1 progress -> library).
 - [x] Phase 4: franchises. Manual linking (never by name), provider suggestions, franchise page, per-format combined stats, v1->v2 migration tested (12+1 tests). Franchise screens compile in CI but are not yet exercised by the emulator test.
 - [x] Phase 5: statistics dashboard (per-format, units never mixed, genres/authors/studios, anime watch-time estimate) and activity history (day/week/month/year/all, void/restore without changing progress). Logic unit-tested; screens not emulator-tested.
-- [ ] Phase 6: advanced search (basic search/browse/filters done in Phase 2/3)
-- [ ] Phase 7: calendar / release tracking (data stored from AniList next-airing; no screen yet)
+- [x] Phase 6: Discover filters (genre/year/status/score/sort) applied to results; unit-tested; screen compiles and opens in emulator test.
+- [x] Phase 7: release calendar from provider-reported dates for library titles, can be disabled in Settings. Empty state verified on emulator; populated state unit-untested (needs live airing data).
 - [~] Phase 8: Settings (theme), full DB backup/restore with validation + safety copy, JSON/CSV export, MAL XML import, daily auto-backup to a user-chosen folder (WorkManager+SAF). Backup/restore round trip, export and MAL import unit-tested. NOT verified on a device: file pickers/SAF, auto-backup worker, restart after restore.
-- [ ] Phase 9: emulator UI smoke tests, polish, performance
+- [~] Phase 9: emulator smoke test covers manual entry, progress, library, franchises, calendar, statistics, settings. Still unverified on a device: file pickers/SAF, auto-backup worker, restart after restore, real provider data on screen.
 
 Statistics and Settings tabs currently show "not built yet".
 
