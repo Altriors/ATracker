@@ -86,5 +86,23 @@ class SmokeTest {
             rule.onAllNodesWithText("Smoke Test Novel").fetchSemanticsNodes().isNotEmpty()
         }
         shot("06-library")
+
+        // Franchise list (empty), release calendar (empty), statistics and settings must all open.
+        rule.onNodeWithText("Franchises").performClick()
+        rule.waitUntil(5_000) { rule.onAllNodesWithText("No franchises yet").fetchSemanticsNodes().isNotEmpty() }
+        shot("07-franchises")
+        rule.runOnUiThread { rule.activity.onBackPressedDispatcher.onBackPressed() }
+        rule.onNodeWithText("Calendar").performClick()
+        rule.waitUntil(5_000) { rule.onAllNodesWithText("Nothing scheduled").fetchSemanticsNodes().isNotEmpty() }
+        shot("08-calendar")
+        rule.runOnUiThread { rule.activity.onBackPressedDispatcher.onBackPressed() }
+
+        rule.onAllNodesWithText("Statistics").onFirst().performClick()
+        rule.waitUntil(5_000) { rule.onAllNodesWithText("Web Novel").fetchSemanticsNodes().isNotEmpty() }
+        shot("09-statistics")
+
+        rule.onAllNodesWithText("Settings").onFirst().performClick()
+        rule.waitUntil(5_000) { rule.onAllNodesWithText("Backup and restore").fetchSemanticsNodes().isNotEmpty() }
+        shot("10-settings")
     }
 }

@@ -36,6 +36,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import app.atracker.ui.calendar.CalendarScreen
 import app.atracker.ui.detail.DetailScreen
 import app.atracker.ui.franchise.FranchiseListScreen
 import app.atracker.ui.franchise.FranchiseScreen
@@ -108,7 +109,7 @@ private fun AppRoot(app: ATrackerApp) {
         NavHost(nav, startDestination = Tab.HOME.route, modifier = Modifier.padding(if (showBar) padding else PaddingValues(0.dp)).fillMaxSize()) {
             composable(Tab.HOME.route) { HomeScreen(app, ::openDetail) { goTab(Tab.DISCOVER) } }
             composable(Tab.DISCOVER.route) { DiscoverScreen(app, ::openDetail, ::openManual) }
-            composable(Tab.LIBRARY.route) { LibraryScreen(app, ::openDetail, onDiscover = { goTab(Tab.DISCOVER) }, onFranchises = { nav.navigate("franchises") }) }
+            composable(Tab.LIBRARY.route) { LibraryScreen(app, ::openDetail, onDiscover = { goTab(Tab.DISCOVER) }, onFranchises = { nav.navigate("franchises") }, onCalendar = { nav.navigate("calendar") }) }
             composable(Tab.STATS.route) { StatsScreen(app, ::openDetail) }
             composable(Tab.SETTINGS.route) { SettingsScreen(app, onRestart = ::restartApp) }
             composable("detail/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
@@ -118,6 +119,7 @@ private fun AppRoot(app: ATrackerApp) {
                     onOpenTitle = ::openDetail, onOpenFranchise = { nav.navigate("franchise/$it") }
                 )
             }
+            composable("calendar") { CalendarScreen(app, onBack = { nav.popBackStack() }, onOpen = ::openDetail) }
             composable("franchises") {
                 FranchiseListScreen(app, onBack = { nav.popBackStack() }, onOpen = { nav.navigate("franchise/$it") })
             }

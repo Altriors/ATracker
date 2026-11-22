@@ -65,3 +65,29 @@ class LibraryFilterTest {
         assertEquals(listOf(2L, 1L), applyLibraryFilters(custom, emptyMap(), LibraryFilters(sort = LibrarySort.RECENT_UPDATE)).map { it.media.id })
     }
 }
+
+class DiscoverFilterTest {
+    private fun m(t: String, y: Int?, s: Int?, g: List<String>, st: app.atracker.domain.PublicationStatus = app.atracker.domain.PublicationStatus.FINISHED) =
+        app.atracker.domain.MediaMetadata(
+            provider = "anilist", externalId = t, mediaType = app.atracker.domain.MediaType.MANGA, title = t,
+            startYear = y, averageScore = s, genres = g, pubStatus = st
+        )
+
+    private val data = listOf(
+        m("B", 2010, 70, listOf("Action")), m("A", 2022, 85, listOf("Fantasy", "Action")), m("C", null, null, listOf("Fantasy"))
+    )
+
+    @org.junit.Test
+    fun filtersByGenreYearScore() {
+        assertEquals(listOf("B", "A"), data.applyFilters(DiscoverFilters(genre = "action")).map { it.title })
+        assertEquals(listOf("A"), data.applyFilters(DiscoverFilters(yearFrom = 2020)).map { it.title })
+        assertEquals(listOf("A"), data.applyFilters(DiscoverFilters(minScore = 80)).map { it.title })
+    }
+
+    @org.junit.Test
+    fun sorts() {
+        assertEquals(listOf("A", "B", "C"), data.applyFilters(DiscoverFilters(sort = DiscoverSort.SCORE)).map { it.title })
+        assertEquals(listOf("A", "B", "C"), data.applyFilters(DiscoverFilters(sort = DiscoverSort.TITLE)).map { it.title })
+        assertEquals(listOf("A", "B", "C"), data.applyFilters(DiscoverFilters(sort = DiscoverSort.NEWEST)).map { it.title })
+    }
+}

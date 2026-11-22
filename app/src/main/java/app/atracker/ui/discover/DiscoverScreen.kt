@@ -36,6 +36,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import app.atracker.ATrackerApp
+import app.atracker.data.DiscoverFilters
+import app.atracker.data.DiscoverSort
+import app.atracker.data.applyFilters
+import app.atracker.data.applyLocalFilters
+import app.atracker.domain.PublicationStatus
+import app.atracker.ui.common.Picker
 import app.atracker.data.provider.BrowseKind
 import app.atracker.domain.MediaType
 import app.atracker.ui.common.EmptyState
@@ -83,6 +89,22 @@ fun DiscoverScreen(app: ATrackerApp, onOpen: (Long) -> Unit, onManual: (String) 
                 }
             }
         }
+        item {
+            val f = state.filters
+            val all = state.outcome?.remote.orEmpty()
+            val genres = all.flatMap { it.genres }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.map { it.key }.take(40)
+            val years = (java.time.Year.now().value downTo 1960 step 5).toList()
+            Row(Modifier.padding(horizontal = 4.dp)) {
+                Picker("Genre", f.genre, genres, { it }, { model.setFilters(f.copy(genre = it)) })
+                Picker("Since", f.yearFrom, years, { it.toString() }, { model.setFilters(f.copy(yearFrom = it)) })
+            }
+            Row(Modifier.padding(horizontal = 4.dp)) {
+                Picker("Status", f.status, PublicationStatus.entries.toList(), { it.label }, { model.setFilters(f.copy(status = it)) })
+                Picker("Min score", f.minScore, listOf(60, 70, 75, 80, 85), { (it / 10.0).toString() + "+" }, { model.setFilters(f.copy(minScore = it)) })
+                Picker("Sort", f.sort, DiscoverSort.entries.toList(), { it.label }, { it?.let { s -> model.setFilters(f.copy(sort = s)) } }, anyLabel = null)
+            }
+            if (f.active) Text("Filters apply to the results shown here (they do not change what is in your library).", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
+        }
         if (state.loading) {
             item {
                 Row(Modifier.fillMaxWidth().padding(24.dp), horizontalArrangement = Arrangement.Center) { CircularProgressIndicator() }
@@ -90,7 +112,8 @@ fun DiscoverScreen(app: ATrackerApp, onOpen: (Long) -> Unit, onManual: (String) 
         }
         openError?.let { item { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp)) } }
 
-        val outcome = state.outcome
+        val raw = state.outcome
+        val outcome = raw?.copy(local = raw.local.applyLocalFilters(state.filters), remote = raw.remote.applyFilters(state.filters))
         if (outcome != null) {
             if (outcome.local.isNotEmpty()) {
                 item { SectionTitle("Already in your catalogue") }

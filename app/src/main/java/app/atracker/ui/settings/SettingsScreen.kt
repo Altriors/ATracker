@@ -165,6 +165,15 @@ fun SettingsScreen(app: ATrackerApp, onRestart: () -> Unit) {
             }
         }
 
+        Section("Release calendar") {
+            val cal by remember { app.database.settingDao().observe("calendar.enabled") }.collectAsState(initial = null)
+            val scope = androidx.compose.runtime.rememberCoroutineScope()
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Show the release calendar in My Library", Modifier.weight(1f))
+                Switch(cal != "off", { on -> scope.launch { app.database.settingDao().put(AppSettingEntity("calendar.enabled", if (on) "on" else "off")) } })
+            }
+        }
+
         Section("Your data") {
             Text("$count titles in your library. Everything is stored only on this phone.", style = MaterialTheme.typography.bodyMedium)
             Text(

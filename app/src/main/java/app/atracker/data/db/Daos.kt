@@ -199,6 +199,9 @@ interface ActivityDao {
     @Query("UPDATE activity_event SET voidedAt = :at WHERE id = :id")
     suspend fun setVoided(id: Long, at: Long?)
 
+    @Query("SELECT r.id AS id, r.mediaId AS mediaId, m.title AS title, m.mediaType AS mediaType, r.kind AS kind, r.number AS number, r.releaseAt AS releaseAt FROM release_info r JOIN media m ON m.id = r.mediaId JOIN library_entry l ON l.mediaId = r.mediaId WHERE r.releaseAt >= :from AND r.releaseAt < :to AND l.status IN ('CURRENT','PLANNED','ON_HOLD') ORDER BY r.releaseAt")
+    fun observeLibraryReleases(from: Long, to: Long): Flow<List<ReleaseRow>>
+
     @Query("SELECT e.*, m.title AS title, m.mediaType AS mediaType FROM activity_event e JOIN media m ON m.id = e.mediaId WHERE e.timestamp >= :from AND e.timestamp < :to ORDER BY e.timestamp DESC, e.id DESC")
     fun observeHistory(from: Long, to: Long): Flow<List<HistoryRow>>
 }
@@ -325,3 +328,8 @@ interface SettingDao {
     @Query("SELECT value FROM app_setting WHERE `key` = :key")
     fun observe(key: String): Flow<String?>
 }
+
+data class ReleaseRow(
+    val id: Long, val mediaId: Long, val title: String, val mediaType: String,
+    val kind: String, val number: Int?, val releaseAt: Long
+)

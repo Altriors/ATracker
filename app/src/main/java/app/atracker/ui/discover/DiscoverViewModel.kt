@@ -3,6 +3,7 @@ package app.atracker.ui.discover
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.atracker.ATrackerApp
+import app.atracker.data.DiscoverFilters
 import app.atracker.data.SearchOutcome
 import app.atracker.data.provider.BrowseKind
 import app.atracker.domain.MediaMetadata
@@ -20,7 +21,8 @@ data class DiscoverState(
     val type: MediaType? = MediaType.ANIME,
     val kind: BrowseKind = BrowseKind.POPULAR,
     val loading: Boolean = false,
-    val outcome: SearchOutcome? = null
+    val outcome: SearchOutcome? = null,
+    val filters: DiscoverFilters = DiscoverFilters()
 )
 
 class DiscoverViewModel(private val app: ATrackerApp) : ViewModel() {
@@ -34,6 +36,7 @@ class DiscoverViewModel(private val app: ATrackerApp) : ViewModel() {
     fun setKind(k: BrowseKind) { _state.update { it.copy(kind = k, outcome = null) }; reload() }
     fun setQuery(q: String) { _state.update { it.copy(query = q) } }
     fun submit() = reload()
+    fun setFilters(f: DiscoverFilters) { _state.update { it.copy(filters = f) } }
 
     private fun reload() {
         job?.cancel()

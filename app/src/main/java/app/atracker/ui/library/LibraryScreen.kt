@@ -58,7 +58,7 @@ import app.atracker.ui.common.vm
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LibraryScreen(app: ATrackerApp, onOpen: (Long) -> Unit, onDiscover: () -> Unit, onFranchises: () -> Unit) {
+fun LibraryScreen(app: ATrackerApp, onOpen: (Long) -> Unit, onDiscover: () -> Unit, onFranchises: () -> Unit, onCalendar: () -> Unit) {
     val model = vm { LibraryViewModel(app) }
     val items by model.items.collectAsState()
     val filters by model.filters.collectAsState()
@@ -76,6 +76,8 @@ fun LibraryScreen(app: ATrackerApp, onOpen: (Long) -> Unit, onDiscover: () -> Un
                 leadingIcon = { Icon(Icons.Filled.Search, null) }
             )
             androidx.compose.material3.TextButton(onClick = onFranchises) { Text("Franchises") }
+            val calendarOn by app.database.settingDao().observe("calendar.enabled").collectAsState(initial = null)
+            if (calendarOn != "off") androidx.compose.material3.TextButton(onClick = onCalendar) { Text("Calendar") }
             IconButton(onClick = { grid = !grid }) {
                 Icon(if (grid) Icons.AutoMirrored.Filled.ViewList else Icons.Filled.GridView, if (grid) "List view" else "Grid view")
             }
