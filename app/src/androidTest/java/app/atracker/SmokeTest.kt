@@ -10,6 +10,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
@@ -32,9 +33,6 @@ class SmokeTest {
         val bmp = rule.onRoot().captureToImage().asAndroidBitmap()
         FileOutputStream(File(dir, "$name.png")).use { bmp.compress(Bitmap.CompressFormat.PNG, 90, it) }
     }
-
-    private fun androidx.compose.ui.test.SemanticsNodeInteractionsProvider.onRoot() =
-        this.let { androidx.compose.ui.test.onRoot() }
 
     @Test
     fun manualTitleFlow() {
@@ -68,7 +66,7 @@ class SmokeTest {
         }
         shot("05-detail-progress")
 
-        androidx.test.espresso.Espresso.pressBack()
+        rule.runOnUiThread { rule.activity.onBackPressedDispatcher.onBackPressed() }
         rule.onAllNodesWithText("My Library").onFirst().performClick()
         rule.waitUntil(timeoutMillis = 10_000) {
             rule.onAllNodesWithText("Smoke Test Novel").fetchSemanticsNodes().isNotEmpty()
