@@ -54,6 +54,24 @@ interface MediaDao {
     @Query("SELECT * FROM media_title WHERE mediaId = :mediaId")
     suspend fun titlesFor(mediaId: Long): List<MediaTitleEntity>
 
+    @Query("SELECT * FROM media_title WHERE mediaId = :mediaId")
+    fun observeTitles(mediaId: Long): Flow<List<MediaTitleEntity>>
+
+    @Query("SELECT * FROM media_title")
+    fun observeAllTitles(): Flow<List<MediaTitleEntity>>
+
+    @Query("SELECT * FROM media_genre")
+    fun observeAllGenres(): Flow<List<MediaGenreEntity>>
+
+    @Query("SELECT * FROM media_source WHERE mediaId = :mediaId")
+    fun observeSources(mediaId: Long): Flow<List<MediaSourceEntity>>
+
+    @Query("SELECT COALESCE(GROUP_CONCAT(name, ', '), '') FROM media_genre WHERE mediaId = :mediaId AND kind = 'GENRE'")
+    suspend fun observeGenresOnce(mediaId: Long): String
+
+    @Query("SELECT COALESCE(GROUP_CONCAT(name, ', '), '') FROM media_credit WHERE mediaId = :mediaId AND role = 'AUTHOR'")
+    suspend fun observeAuthorsOnce(mediaId: Long): String
+
     @Query("DELETE FROM media_genre WHERE mediaId = :mediaId")
     suspend fun clearGenres(mediaId: Long)
 
