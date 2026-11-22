@@ -1,12 +1,20 @@
 name: Emulator UI tests
 
+# Expensive (about 5 minutes). Runs only at milestones:
+#   - manually (Actions tab > Emulator UI tests > Run workflow), or
+#   - when a pushed commit message contains the marker [emulator]
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: emulator-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   emulator:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[emulator]')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -34,6 +42,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: emulator-output
-          path: |
-            build/emulator-out/**
-            app/build/reports/androidTests/**
+          path: build/emulator-out/**
+          retention-days: 7

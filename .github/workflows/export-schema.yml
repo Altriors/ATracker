@@ -4,6 +4,10 @@ on:
     paths:
       - scripts/export-schema.trigger
   workflow_dispatch:
+concurrency:
+  group: export-schema
+  cancel-in-progress: true
+
 jobs:
   export:
     runs-on: ubuntu-latest

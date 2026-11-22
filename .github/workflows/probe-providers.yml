@@ -5,6 +5,10 @@ on:
     paths:
       - scripts/probe-providers.sh
       - .github/workflows/probe-providers.yml
+concurrency:
+  group: probe-providers
+  cancel-in-progress: true
+
 jobs:
   probe:
     runs-on: ubuntu-latest

@@ -1,10 +1,25 @@
 name: Build APK
 
+# One job: compile, run all unit tests, build the APK, publish it as the rolling "latest" release.
+# Skipped for pushes that only touch docs or the other workflows' own files.
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - "scripts/probe-providers.sh"
+      - "scripts/export-schema.trigger"
+      - ".github/workflows/probe-providers.yml"
+      - ".github/workflows/export-schema.yml"
+      - ".github/workflows/emulator-tests.yml"
   pull_request:
   workflow_dispatch:
+
+# A newer push makes any still-running build of an older commit pointless.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -23,7 +38,6 @@ jobs:
 
       - name: Accept Android SDK licenses (SDK is preinstalled on the runner)
         run: |
-          echo "ANDROID_HOME=${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
           SDKM=$(ls ${ANDROID_HOME:-$ANDROID_SDK_ROOT}/cmdline-tools/*/bin/sdkmanager | head -1)
           yes | "$SDKM" --licenses > /dev/null || true
 
@@ -39,7 +53,7 @@ jobs:
       - name: Unit tests
         run: |
           for attempt in 1 2 3; do
-            ./gradlew --no-daemon testDebugUnitTest && exit 0
+            ./gradlew --no-daemon testDebugUnitTest -PbuildNumber=${{ github.run_number }} && exit 0
             echo "Unit tests failed (attempt $attempt); retrying after a pause"
             sleep 20
           done
@@ -49,7 +63,7 @@ jobs:
         if: always()
         run: |
           python3 - <<'PY'
-          import glob, xml.etree.ElementTree as ET
+          import glob, os, xml.etree.ElementTree as ET
           t=f=e=s=0
           for p in glob.glob("app/build/test-results/testDebugUnitTest/*.xml"):
               r=ET.parse(p).getroot()
@@ -58,20 +72,25 @@ jobs:
                   bad=c.find("failure") is not None or c.find("error") is not None
                   print(("FAIL " if bad else "pass ")+r.get("name").split(".")[-1]+"."+c.get("name"))
           print(f"TEST TOTALS tests={t} failures={f} errors={e} skipped={s}")
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+              env.write(f"TEST_TOTAL={t}\n")
           PY
 
+      # Reuses the classes compiled above, so this is not a second full build.
       - name: Build debug APK
-        run: ./gradlew --no-daemon assembleDebug
+        run: ./gradlew --no-daemon assembleDebug -PbuildNumber=${{ github.run_number }}
 
       - name: Name the APK
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk "dist/ATracker-debug-${GITHUB_RUN_NUMBER}.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/ATracker.apk"
+          ls -la dist
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ATracker-apk
-          path: dist/*.apk
+          name: ATracker-apk-${{ github.run_number }}
+          path: dist/ATracker.apk
+          retention-days: 14
 
       - name: Upload test reports on failure
         if: failure()
@@ -79,12 +98,22 @@ jobs:
         with:
           name: test-reports
           path: app/build/reports/tests/
+          retention-days: 7
 
-      - name: Publish release (main only)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: build-${{ github.run_number }}
-          name: ATracker build ${{ github.run_number }}
-          files: dist/*.apk
-          prerelease: true
+      # Only reached when compilation AND every test passed. The release always points at the newest
+      # good build and keeps one stable download URL:
+      #   https://github.com/Altriors/ATracker/releases/download/latest/ATracker.apk
+      - name: Publish rolling "latest" release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git tag -f latest
+          git push -f origin latest
+          NOTES="Build ${{ github.run_number }} from commit ${GITHUB_SHA::7}. ${TEST_TOTAL} unit tests passed. Emulator UI tests are run separately at milestones (see the Emulator UI tests workflow). Install over the previous version; do not uninstall first."
+          if gh release view latest > /dev/null 2>&1; then
+            gh release edit latest --prerelease --title "ATracker (latest build)" --notes "$NOTES"
+          else
+            gh release create latest --prerelease --title "ATracker (latest build)" --notes "$NOTES"
+          fi
+          gh release upload latest dist/ATracker.apk --clobber

@@ -14,8 +14,11 @@ android {
         applicationId = "app.atracker"
         minSdk = 29
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        // CI passes -PbuildNumber=<run number>, so every build has a higher versionCode than the last and
+        // installs as an update. Local builds default to 1.
+        val build = (project.findProperty("buildNumber") as String?)?.toIntOrNull() ?: 1
+        versionCode = build
+        versionName = "0.1.$build"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
