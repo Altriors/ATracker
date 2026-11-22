@@ -5,6 +5,7 @@ import app.atracker.data.db.AppDatabase
 import app.atracker.data.db.MediaCreditEntity
 import app.atracker.data.db.MediaEntity
 import app.atracker.data.db.MediaGenreEntity
+import app.atracker.data.db.MediaRelationEntity
 import app.atracker.data.db.MediaSourceEntity
 import app.atracker.data.db.MediaTitleEntity
 import app.atracker.data.db.ReleaseInfoEntity
@@ -80,6 +81,15 @@ class MediaRepository(
             media.clearCredits(id)
             media.insertCredits(meta.credits.distinct().map {
                 MediaCreditEntity(mediaId = id, role = it.role.name, name = it.name)
+            })
+        }
+        if (meta.relations.isNotEmpty()) {
+            media.clearRelations(id)
+            media.insertRelations(meta.relations.distinctBy { it.provider to it.externalId }.map {
+                MediaRelationEntity(
+                    mediaId = id, provider = it.provider, externalId = it.externalId,
+                    relatedType = it.mediaType?.name, title = it.title, relation = it.relation.name
+                )
             })
         }
         // Dated releases are replaced per provider so a past "next episode" never lingers.

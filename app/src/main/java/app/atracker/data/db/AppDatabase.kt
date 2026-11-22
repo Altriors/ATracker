@@ -9,17 +9,18 @@ import androidx.room.RoomDatabase
  * Schema version history (add a Migration for every bump; never use destructive migration,
  * the database holds the user's only copy of their progress):
  *   1 - initial schema
+ *   2 - media_relation table (provider-reported relations, used for franchise suggestions)
  */
 @Database(
     entities = [
         MediaEntity::class, MediaSourceEntity::class, MediaTitleEntity::class, MediaGenreEntity::class,
-        MediaCreditEntity::class, ReleaseInfoEntity::class, CatalogueCacheEntity::class,
+        MediaCreditEntity::class, MediaRelationEntity::class, ReleaseInfoEntity::class, CatalogueCacheEntity::class,
         FranchiseEntity::class, FranchiseMemberEntity::class,
         LibraryEntryEntity::class, ActivityEventEntity::class,
         CustomListEntity::class, CustomListItemEntity::class, UserTagEntity::class, LibraryTagEntity::class,
         AppSettingEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -38,7 +39,9 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun get(context: Context): AppDatabase = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, FILE_NAME)
-                // Migrations are added here as the schema evolves. No fallbackToDestructiveMigration.
+                // Every schema change needs a Migration. No fallbackToDestructiveMigration: the database
+                // is the only copy of the user's progress.
+                .addMigrations(*Migrations.ALL)
                 .build()
                 .also { instance = it }
         }

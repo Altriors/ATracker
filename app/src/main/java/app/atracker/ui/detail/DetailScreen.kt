@@ -242,7 +242,7 @@ private fun Stepper(value: Int, onSet: (Int) -> Unit, step: Int, label: String) 
     var dialog by remember { mutableStateOf(false) }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(onClick = { onSet(value - step) }, enabled = value > 0) { Icon(Icons.Filled.Remove, "Decrease") }
-        Button(onClick = { onSet(value + step) }) { Icon(Icons.Filled.Add, null); Text(" +$step") }
+        Button(onClick = { onSet(value + step) }) { Icon(Icons.Filled.Add, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("+$step") }
         OutlinedButton(onClick = { onSet(value + 10) }) { Text("+10") }
         TextButton(onClick = { dialog = true }) { Text("Set…") }
     }

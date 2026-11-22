@@ -74,7 +74,7 @@ class SmokeTest {
         }
         shot("04-detail-added")
 
-        rule.onNode(hasText("+1", substring = true)).performScrollTo().performClick()
+        rule.onNode(hasText("+1")).performScrollTo().performClick()
         rule.waitUntil(timeoutMillis = 10_000) {
             rule.onAllNodes(hasText("1 / ?", substring = true)).fetchSemanticsNodes().isNotEmpty()
         }

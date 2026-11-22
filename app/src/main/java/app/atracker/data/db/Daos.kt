@@ -18,6 +18,12 @@ data class LibraryItem(
 
 data class MediaSourceRef(val provider: String, val externalId: String)
 
+data class FranchiseMemberRow(
+    @Embedded val member: FranchiseMemberEntity,
+    @Relation(parentColumn = "mediaId", entityColumn = "id") val media: MediaEntity,
+    @Relation(parentColumn = "mediaId", entityColumn = "mediaId") val entry: LibraryEntryEntity?
+)
+
 @Dao
 interface MediaDao {
     @Insert
@@ -101,6 +107,21 @@ interface MediaDao {
 
     @Query("SELECT COUNT(*) FROM media")
     suspend fun count(): Int
+
+    @Query("DELETE FROM media_relation WHERE mediaId = :mediaId")
+    suspend fun clearRelations(mediaId: Long)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertRelations(relations: List<MediaRelationEntity>)
+
+    @Query("SELECT * FROM media_relation WHERE mediaId = :mediaId")
+    suspend fun relationsFor(mediaId: Long): List<MediaRelationEntity>
+
+    @Query("SELECT * FROM media_relation WHERE mediaId = :mediaId")
+    fun observeRelations(mediaId: Long): Flow<List<MediaRelationEntity>>
+
+    @Query("SELECT * FROM media WHERE id IN (:ids)")
+    suspend fun getByIds(ids: List<Long>): List<MediaEntity>
 
     @Query("DELETE FROM release_info WHERE mediaId = :mediaId AND source = :source")
     suspend fun clearReleases(mediaId: Long, source: String)
@@ -188,7 +209,37 @@ interface FranchiseDao {
 
     @Query("DELETE FROM franchise WHERE id = :id")
     suspend fun deleteFranchise(id: Long)
+
+    @Query("UPDATE franchise SET name = :name WHERE id = :id")
+    suspend fun rename(id: Long, name: String)
+
+    @Query("UPDATE franchise_member SET relation = :relation WHERE mediaId = :mediaId")
+    suspend fun setRelation(mediaId: Long, relation: String)
+
+    @Query("SELECT COUNT(*) FROM franchise_member WHERE franchiseId = :franchiseId")
+    suspend fun memberCount(franchiseId: Long): Int
+
+    @Transaction
+    @Query("SELECT * FROM franchise_member WHERE franchiseId = :franchiseId ORDER BY id")
+    fun observeMembers(franchiseId: Long): Flow<List<FranchiseMemberRow>>
+
+    @Query("SELECT franchiseId FROM franchise_member WHERE mediaId = :mediaId")
+    fun observeFranchiseIdOf(mediaId: Long): Flow<Long?>
+
+    @Query("SELECT * FROM franchise WHERE id = :id")
+    fun observeFranchise(id: Long): Flow<FranchiseEntity?>
+
+    @Query("SELECT f.*, (SELECT COUNT(*) FROM franchise_member m WHERE m.franchiseId = f.id) AS memberCount FROM franchise f ORDER BY f.name COLLATE NOCASE")
+    suspend fun observeSummariesOnce(): List<FranchiseSummary>
+
+    @Query("SELECT f.*, (SELECT COUNT(*) FROM franchise_member m WHERE m.franchiseId = f.id) AS memberCount FROM franchise f ORDER BY f.name COLLATE NOCASE")
+    fun observeSummaries(): Flow<List<FranchiseSummary>>
 }
+
+data class FranchiseSummary(
+    @Embedded val franchise: FranchiseEntity,
+    val memberCount: Int
+)
 
 @Dao
 interface ListDao {

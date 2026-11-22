@@ -106,6 +106,18 @@ class CatalogueRepository(
         return RefreshReport(updated, failed)
     }
 
+    /**
+     * Fetches a title that a provider listed as related (e.g. the anime adaptation of a manga) and
+     * saves it to the local catalogue so it can be linked. Returns null when the provider no longer
+     * has it. Nothing is added to the library.
+     */
+    suspend fun openRelated(provider: String, externalId: String): Long? {
+        db.mediaDao().findIdBySource(provider, externalId)?.let { return it }
+        val p = providers.firstOrNull { it.id == provider } ?: return null
+        val meta = p.detail(externalId) ?: return null
+        return media.saveMetadata(meta)
+    }
+
     private suspend fun attempt(block: suspend () -> Cached): Result<Cached> = try {
         Result.success(block())
     } catch (e: CancellationException) {

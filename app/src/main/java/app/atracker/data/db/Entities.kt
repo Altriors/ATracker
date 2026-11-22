@@ -105,6 +105,25 @@ data class ReleaseInfoEntity(
     val source: String
 )
 
+/**
+ * Relations a provider reports for a title (adaptation, sequel ...). Stored so franchise
+ * suggestions work offline. They are only suggestions: nothing is linked automatically.
+ */
+@Entity(
+    tableName = "media_relation",
+    foreignKeys = [ForeignKey(MediaEntity::class, ["id"], ["mediaId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("mediaId"), Index(value = ["mediaId", "provider", "externalId"], unique = true)]
+)
+data class MediaRelationEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val mediaId: Long,
+    val provider: String,
+    val externalId: String,
+    val relatedType: String? = null,
+    val title: String,
+    val relation: String
+)
+
 /** Raw API responses so searches and detail pages work offline and respect rate limits. */
 @Entity(tableName = "catalogue_cache")
 data class CatalogueCacheEntity(
