@@ -41,12 +41,12 @@ Coverage limits: only what these sources hold can be discovered. Web novels beyo
 - [x] Environment inspected; build via GitHub Actions; push access verified
 - [x] Phase 1: Room schema v1, repositories, ownership tests
 - [x] Phase 2: provider layer (AniList, MangaDex, Wikidata), cache + offline fallback, cross-reference merge, manual entry data layer. 29 tests on real captured responses.
-- [~] Phase 3: library + progress. Data layer tested. UI written (Home, Discover, Detail with progress/rating/status/notes/favourite/rewatch, Library grid/list with filters+sort+search). Filtering logic tested (14 tests). UI has NOT yet been run on a device or emulator.
-- [ ] Phase 4: franchises (linking UI, franchise page, combined stats)
-- [ ] Phase 5: activity history views + statistics dashboard
+- [x] Phase 3: library + progress. Data layer + filter logic unit-tested (14 tests); UI verified on an emulator (manual entry -> detail -> +1 progress -> library).
+- [x] Phase 4: franchises. Manual linking (never by name), provider suggestions, franchise page, per-format combined stats, v1->v2 migration tested (12+1 tests). Franchise screens compile in CI but are not yet exercised by the emulator test.
+- [x] Phase 5: statistics dashboard (per-format, units never mixed, genres/authors/studios, anime watch-time estimate) and activity history (day/week/month/year/all, void/restore without changing progress). Logic unit-tested; screens not emulator-tested.
 - [ ] Phase 6: advanced search (basic search/browse/filters done in Phase 2/3)
 - [ ] Phase 7: calendar / release tracking (data stored from AniList next-airing; no screen yet)
-- [ ] Phase 8: backup/restore, JSON/CSV export, MAL import, auto-backup, settings screen
+- [~] Phase 8: Settings (theme), full DB backup/restore with validation + safety copy, JSON/CSV export, MAL XML import, daily auto-backup to a user-chosen folder (WorkManager+SAF). Backup/restore round trip, export and MAL import unit-tested. NOT verified on a device: file pickers/SAF, auto-backup worker, restart after restore.
 - [ ] Phase 9: emulator UI smoke tests, polish, performance
 
 Statistics and Settings tabs currently show "not built yet".
