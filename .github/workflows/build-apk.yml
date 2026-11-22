@@ -29,8 +29,21 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # Robolectric downloads its Android runtime jar from Maven at test time; cache it and retry
+      # so a transient network error on the runner does not fail the build.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: robolectric-${{ hashFiles('app/build.gradle.kts') }}
+
       - name: Unit tests
-        run: ./gradlew --no-daemon testDebugUnitTest
+        run: |
+          for attempt in 1 2 3; do
+            ./gradlew --no-daemon testDebugUnitTest && exit 0
+            echo "Unit tests failed (attempt $attempt); retrying after a pause"
+            sleep 20
+          done
+          exit 1
 
       - name: Test summary
         if: always()
