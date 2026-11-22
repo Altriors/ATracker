@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -24,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -89,7 +91,7 @@ private fun AppRoot(app: ATrackerApp) {
             }
         }
     ) { padding ->
-        NavHost(nav, startDestination = Tab.HOME.route, modifier = Modifier.padding(if (showBar) padding else androidx.compose.foundation.layout.PaddingValues(0.dp)).fillMaxSize()) {
+        NavHost(nav, startDestination = Tab.HOME.route, modifier = Modifier.padding(if (showBar) padding else PaddingValues(0.dp)).fillMaxSize()) {
             composable(Tab.HOME.route) { HomeScreen(app, ::openDetail) { goTab(Tab.DISCOVER) } }
             composable(Tab.DISCOVER.route) { DiscoverScreen(app, ::openDetail, ::openManual) }
             composable(Tab.LIBRARY.route) { LibraryScreen(app, ::openDetail) { goTab(Tab.DISCOVER) } }
