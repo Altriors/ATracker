@@ -69,6 +69,15 @@ interface MediaDao {
     @Query("SELECT * FROM media_genre")
     fun observeAllGenres(): Flow<List<MediaGenreEntity>>
 
+    @Query("SELECT * FROM media_genre")
+    suspend fun observeAllGenresOnce(): List<MediaGenreEntity>
+
+    @Query("SELECT id FROM media WHERE title = :title AND mediaType = :type LIMIT 1")
+    suspend fun findIdByTitleType(title: String, type: String): Long?
+
+    @Query("SELECT * FROM media_credit")
+    fun observeAllCredits(): Flow<List<MediaCreditEntity>>
+
     @Query("SELECT * FROM media_source WHERE mediaId = :mediaId")
     fun observeSources(mediaId: Long): Flow<List<MediaSourceEntity>>
 
@@ -164,6 +173,10 @@ interface LibraryDao {
 
     @Query("SELECT COUNT(*) FROM library_entry")
     fun observeCount(): Flow<Int>
+
+    @Transaction
+    @Query("SELECT * FROM library_entry ORDER BY mediaId")
+    suspend fun allItems(): List<LibraryItem>
 }
 
 @Dao
@@ -180,9 +193,21 @@ interface ActivityDao {
     @Query("SELECT * FROM activity_event WHERE mediaId = :mediaId")
     suspend fun allForMedia(mediaId: Long): List<ActivityEventEntity>
 
+    @Query("SELECT * FROM activity_event ORDER BY id")
+    suspend fun allEvents(): List<ActivityEventEntity>
+
     @Query("UPDATE activity_event SET voidedAt = :at WHERE id = :id")
     suspend fun setVoided(id: Long, at: Long?)
+
+    @Query("SELECT e.*, m.title AS title, m.mediaType AS mediaType FROM activity_event e JOIN media m ON m.id = e.mediaId WHERE e.timestamp >= :from AND e.timestamp < :to ORDER BY e.timestamp DESC, e.id DESC")
+    fun observeHistory(from: Long, to: Long): Flow<List<HistoryRow>>
 }
+
+data class HistoryRow(
+    @androidx.room.Embedded val event: ActivityEventEntity,
+    val title: String,
+    val mediaType: String
+)
 
 @Dao
 interface FranchiseDao {

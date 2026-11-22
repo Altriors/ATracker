@@ -1,10 +1,11 @@
 package app.atracker
 
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -21,8 +22,10 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -40,6 +43,9 @@ import app.atracker.ui.discover.DiscoverScreen
 import app.atracker.ui.home.HomeScreen
 import app.atracker.ui.library.LibraryScreen
 import app.atracker.ui.manual.ManualEntryScreen
+import app.atracker.ui.settings.KEY_THEME
+import app.atracker.ui.settings.SettingsScreen
+import app.atracker.ui.stats.StatsScreen
 import app.atracker.ui.theme.ATrackerTheme
 import java.net.URLDecoder
 import java.net.URLEncoder
@@ -57,12 +63,18 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val app = application as ATrackerApp
-        setContent { ATrackerTheme { AppRoot(app) } }
+        setContent {
+            val pref by app.database.settingDao().observe(KEY_THEME).collectAsState(initial = null)
+            val dark = when (pref) { "dark" -> true; "light" -> false; else -> isSystemInDarkTheme() }
+            ATrackerTheme(darkTheme = dark) { AppRoot(app) }
+        }
     }
 }
 
 @Composable
 private fun AppRoot(app: ATrackerApp) {
+    val context = LocalContext.current
+    fun restartApp() = context.restartApp()
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val route = backStack?.destination?.route
@@ -97,8 +109,8 @@ private fun AppRoot(app: ATrackerApp) {
             composable(Tab.HOME.route) { HomeScreen(app, ::openDetail) { goTab(Tab.DISCOVER) } }
             composable(Tab.DISCOVER.route) { DiscoverScreen(app, ::openDetail, ::openManual) }
             composable(Tab.LIBRARY.route) { LibraryScreen(app, ::openDetail, onDiscover = { goTab(Tab.DISCOVER) }, onFranchises = { nav.navigate("franchises") }) }
-            composable(Tab.STATS.route) { ComingSoon("Statistics") }
-            composable(Tab.SETTINGS.route) { ComingSoon("Settings") }
+            composable(Tab.STATS.route) { StatsScreen(app, ::openDetail) }
+            composable(Tab.SETTINGS.route) { SettingsScreen(app, onRestart = ::restartApp) }
             composable("detail/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
                 val id = entry.arguments?.getLong("id") ?: return@composable
                 DetailScreen(
@@ -134,9 +146,9 @@ private fun AppRoot(app: ATrackerApp) {
     }
 }
 
-@Composable
-private fun ComingSoon(name: String) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("$name is not built yet", style = MaterialTheme.typography.titleMedium)
-    }
+/** Relaunches the app process so a restored database is opened fresh. */
+private fun Context.restartApp() {
+    val intent = packageManager.getLaunchIntentForPackage(packageName)!!.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+    startActivity(intent)
+    Runtime.getRuntime().exit(0)
 }

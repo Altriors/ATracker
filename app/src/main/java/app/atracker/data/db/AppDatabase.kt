@@ -20,7 +20,7 @@ import androidx.room.RoomDatabase
         CustomListEntity::class, CustomListItemEntity::class, UserTagEntity::class, LibraryTagEntity::class,
         AppSettingEntity::class
     ],
-    version = 2,
+    version = AppDatabase.VERSION,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -34,8 +34,12 @@ abstract class AppDatabase : RoomDatabase() {
 
     companion object {
         const val FILE_NAME = "atracker.db"
+        const val VERSION = 2
 
         @Volatile private var instance: AppDatabase? = null
+
+        /** Closes and forgets the open database so the file can be replaced (restore). */
+        fun reset() = synchronized(this) { instance?.close(); instance = null }
 
         fun get(context: Context): AppDatabase = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, FILE_NAME)
