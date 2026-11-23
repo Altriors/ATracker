@@ -159,7 +159,10 @@ fun DiscoverScreen(app: ATrackerApp, onOpen: (Long) -> Unit, onManual: (String) 
                 item {
                     EmptyState(
                         "No results for “${state.query.trim()}”",
-                        "Not every title exists in the online catalogues, especially web novels. You can add it yourself and track it like any other title."
+                        "Not every title exists in the online catalogues, especially web novels. You can add it yourself and track it like any other title." +
+                            (if (outcome.counts.isNotEmpty()) "\n\nAsked: " + outcome.counts.entries.joinToString { (p, n) -> "${providerName(p)} returned $n" } +
+                                ". If a well-known title returns 0 everywhere, open Settings → Test connections." else "") +
+                            (if (state.filters.active) "\n\nFilters are active and may be hiding results." else "")
                     )
                 }
             }

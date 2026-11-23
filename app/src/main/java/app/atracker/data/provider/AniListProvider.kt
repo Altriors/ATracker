@@ -80,7 +80,13 @@ class AniListProvider(
 
     private suspend fun runPage(query: String, vars: JsonObject): List<MediaMetadata> {
         val root = post(query, vars)
-        return root["data"]["Page"]["media"].arr().orEmpty().mapNotNull { it.obj()?.let(::parse) }
+        val media = root["data"]["Page"]["media"].arr()
+        if (media == null) {
+            // A reply without a result list is a failure, never "no results" (it must not be cached as empty).
+            val msg = root["errors"].arr()?.firstOrNull()?.let { it["message"].str() }
+            throw ProviderException("AniList returned no result list" + (msg?.let { ": $it" } ?: ""))
+        }
+        return media.mapNotNull { it.obj()?.let(::parse) }
     }
 
     private suspend fun post(query: String, vars: JsonObject): JsonElement {

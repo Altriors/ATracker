@@ -66,6 +66,12 @@ class SettingsViewModel(private val app: ATrackerApp) : ViewModel() {
     val restartNeeded = MutableStateFlow(false)
     fun dismiss() { _message.value = null }
 
+    val diagnostics = MutableStateFlow<List<String>?>(null)
+    fun testConnections() {
+        diagnostics.value = listOf("Testing…")
+        viewModelScope.launch { diagnostics.value = app.catalogueRepository.diagnose() }
+    }
+
     fun setTheme(v: String) { viewModelScope.launch { settings.put(AppSettingEntity(KEY_THEME, v)) } }
 
     fun backupTo(uri: Uri) = io("Backup saved.") {
@@ -172,6 +178,13 @@ fun SettingsScreen(app: ATrackerApp, onRestart: () -> Unit) {
                 Text("Show the release calendar in My Library", Modifier.weight(1f))
                 Switch(cal != "off", { on -> scope.launch { app.database.settingDao().put(AppSettingEntity("calendar.enabled", if (on) "on" else "off")) } })
             }
+        }
+
+        Section("Online catalogues") {
+            val diag by model.diagnostics.collectAsState()
+            OutlinedButton(onClick = { model.testConnections() }, Modifier.fillMaxWidth()) { Text("Test connections") }
+            diag?.forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
+            Text("Searches AniList, MangaDex and Wikidata with a known title and shows exactly what came back on this phone.", style = MaterialTheme.typography.labelSmall)
         }
 
         Section("Your data") {

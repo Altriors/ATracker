@@ -26,7 +26,9 @@ data class SearchOutcome(
     /** provider id -> short message, for providers that failed and had nothing cached. */
     val errors: Map<String, String>,
     /** providers whose results come from an older cache because the request failed. */
-    val staleProviders: Set<String>
+    val staleProviders: Set<String>,
+    /** provider id -> number of results it returned (for diagnostics when nothing is found). */
+    val counts: Map<String, Int> = emptyMap()
 )
 
 data class RefreshReport(val updated: Int, val failed: List<String>)
@@ -73,12 +75,13 @@ class CatalogueRepository(
         val remote = ArrayList<MediaMetadata>()
         val errors = LinkedHashMap<String, String>()
         val stale = LinkedHashSet<String>()
+        val counts = LinkedHashMap<String, Int>()
         results.forEach { (id, r) ->
-            r.onSuccess { c -> remote += c.items; if (c.stale) stale += id }
+            r.onSuccess { c -> remote += c.items; counts[id] = c.items.size; if (c.stale) stale += id }
                 .onFailure { errors[id] = it.message ?: "Request failed" }
         }
         // Same (provider, id) can only appear once; titles from different providers stay separate.
-        return SearchOutcome(local, remote.distinctBy { it.provider to it.externalId }, errors, stale)
+        return SearchOutcome(local, remote.distinctBy { it.provider to it.externalId }, errors, stale, counts)
     }
 
     /** Saves a discovered title into the local catalogue (NOT the library) and returns its id. */
@@ -134,10 +137,11 @@ class CatalogueRepository(
         val now = clock()
         val dao = db.cacheDao()
         val entry = dao.get(key)
-        if (entry != null && entry.expiresAt > now) decode(entry)?.let { return Cached(it, false) }
+        if (entry != null && entry.expiresAt > now) decode(entry)?.takeIf { it.isNotEmpty() }?.let { return Cached(it, false) }
         return try {
             val items = loader()
-            dao.put(CatalogueCacheEntity(key, json.encodeToString(listSerializer, items), now, now + ttl))
+            // Empty answers are not cached: a transient provider glitch must not hide titles for hours.
+            if (items.isNotEmpty()) dao.put(CatalogueCacheEntity(key, json.encodeToString(listSerializer, items), now, now + ttl))
             Cached(items, false)
         } catch (e: CancellationException) {
             throw e
@@ -149,6 +153,22 @@ class CatalogueRepository(
 
     private fun decode(entry: CatalogueCacheEntity): List<MediaMetadata>? =
         runCatching { json.decodeFromString(listSerializer, entry.payload) }.getOrNull()
+
+    /** One line per provider: how a live request went on this device. Used by Settings → Test connections. */
+    suspend fun diagnose(): List<String> = providers.map { p ->
+        val type = if (p.supports(MediaType.ANIME)) MediaType.ANIME else MediaType.WEB_NOVEL
+        val q = if (type == MediaType.ANIME) "Naruto" else "Lord of the Mysteries"
+        val t0 = System.currentTimeMillis()
+        try {
+            val r = p.search(q, type, 1)
+            "${p.displayName}: OK, ${r.size} results for “$q” (${System.currentTimeMillis() - t0} ms)" +
+                (r.firstOrNull()?.let { " — first: ${it.title}" } ?: "")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            "${p.displayName}: FAILED — ${e.javaClass.simpleName}: ${e.message}"
+        }
+    }
 
     companion object {
         /** Real providers with rate limits that match each service's published limits. */

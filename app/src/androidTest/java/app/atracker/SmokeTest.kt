@@ -13,6 +13,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.printToString
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
@@ -104,5 +105,25 @@ class SmokeTest {
         rule.onAllNodesWithText("Settings").onFirst().performClick()
         rule.waitUntil(5_000) { rule.onAllNodesWithText("Backup and restore").fetchSemanticsNodes().isNotEmpty() }
         shot("10-settings")
+    }
+
+    /** End to end against the real providers: a well-known title must come back from the live search. */
+    @Test
+    fun liveSearchFindsKnownTitle() {
+        try {
+            rule.waitForIdle()
+            rule.onAllNodesWithText("Discover").onFirst().performClick()
+            rule.onNodeWithText("Search anime, manga, manhwa, novels…").performTextInput("Naruto")
+            rule.onNodeWithText("Search anime, manga, manhwa, novels…").performImeAction()
+            rule.waitUntil(timeoutMillis = 90_000) {
+                // the field itself holds one "Naruto" node; a result row adds more
+                rule.onAllNodes(hasText("Naruto", substring = true)).fetchSemanticsNodes().size >= 2
+            }
+            shot("20-live-search")
+        } catch (t: Throwable) {
+            runCatching { shot("98-live-search-failure") }
+            runCatching { android.util.Log.e("SMOKE", "LIVE SEARCH TREE:\n" + rule.onRoot().printToString(maxDepth = 12)) }
+            throw t
+        }
     }
 }
