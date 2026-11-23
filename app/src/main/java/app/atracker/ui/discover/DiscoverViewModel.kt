@@ -34,8 +34,18 @@ class DiscoverViewModel(private val app: ATrackerApp) : ViewModel() {
 
     fun setType(t: MediaType?) { _state.update { it.copy(type = t, outcome = null) }; reload() }
     fun setKind(k: BrowseKind) { _state.update { it.copy(kind = k, outcome = null) }; reload() }
-    fun setQuery(q: String) { _state.update { it.copy(query = q) } }
-    fun submit() = reload()
+    private var debounce: Job? = null
+
+    /** Searches automatically shortly after typing stops (the keyboard's search key still works too). */
+    fun setQuery(q: String) {
+        _state.update { it.copy(query = q) }
+        debounce?.cancel()
+        debounce = viewModelScope.launch {
+            kotlinx.coroutines.delay(800)
+            reload()
+        }
+    }
+    fun submit() { debounce?.cancel(); reload() }
     fun setFilters(f: DiscoverFilters) { _state.update { it.copy(filters = f) } }
 
     private fun reload() {
