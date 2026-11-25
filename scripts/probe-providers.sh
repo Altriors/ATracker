@@ -1,22 +1,19 @@
 #!/bin/bash
-# Round 3: capture real response shapes using the exact queries the app uses.
-UA="ATracker-personal/0.1 (probe)"
-FRAG=$(cat scripts/queries/anilist_media.graphql)
-gql() { curl -s -m 30 https://graphql.anilist.co -H 'Content-Type: application/json' -H "User-Agent: $UA" -d "$(jq -nc --arg q "$1" --argjson v "$2" '{query:$q,variables:$v}')"; }
-trim() { jq -c 'walk(if type=="string" and length>90 then .[0:90]+"…" else . end)'; }
-echo "### ANILIST SEARCH (Lord of the Mysteries, MANGA)"
-gql "$FRAG query(\$q:String,\$type:MediaType){Page(page:1,perPage:2){pageInfo{hasNextPage} media(search:\$q,type:\$type,isAdult:false,sort:SEARCH_MATCH){...M}}}" '{"q":"Lord of the Mysteries","type":"MANGA"}' | trim
-echo "### ANILIST DETAIL anime airing (Lord of Mysteries ONA 137667)"
-gql "$FRAG query(\$id:Int){Media(id:\$id){...M}}" '{"id":137667}' | trim
-echo "### ANILIST NOVEL format search (no country filter)"
-for t in "Solo Leveling" "Lord of the Mysteries" "Omniscient Reader"; do echo "== $t"; gql "query(\$q:String){Page(perPage:5){media(search:\$q,type:MANGA,format:NOVEL){id format countryOfOrigin title{romaji english}}}}" "{\"q\":\"$t\"}" | trim; done
-echo "### ANILIST popular manhwa"
-gql "$FRAG query{Page(page:1,perPage:2){media(type:MANGA,countryOfOrigin:KR,isAdult:false,sort:POPULARITY_DESC){...M}}}" '{}' | trim
-echo "### MANGADEX SEARCH (Reverend Insanity)"
-curl -s -m 30 -A "$UA" -G "https://api.mangadex.org/manga" --data-urlencode "title=Reverend Insanity" --data-urlencode "limit=2" --data-urlencode "includes[]=cover_art" --data-urlencode "includes[]=author" --data-urlencode "includes[]=artist" --data-urlencode "contentRating[]=safe" --data-urlencode "contentRating[]=suggestive" | trim
-echo "### WIKIDATA ENTITY (Lord of Mysteries Q109342457)"
-curl -s -m 30 -A "$UA" -G "https://www.wikidata.org/w/api.php" --data-urlencode "action=wbgetentities" --data-urlencode "ids=Q109342457|Q137441819" --data-urlencode "props=labels|descriptions|claims|aliases|sitelinks/urls" --data-urlencode "languages=en" --data-urlencode "format=json" | jq -c '.entities | map_values({label:.labels.en.value, desc:.descriptions.en.value, aliases:[.aliases.en[]?.value], claims:(.claims|to_entries|map({(.key):(.value[0].mainsnak.datavalue.value|if type=="object" then (.id // .time // .amount // .text // "obj") else . end)})|add), sitelinks:(.sitelinks|keys|length)})'
-echo "### WIKIDATA ENTITY LABELS"
-curl -s -m 30 -A "$UA" -G "https://www.wikidata.org/w/api.php" --data-urlencode "action=wbgetentities" --data-urlencode "ids=Q8261|Q7725634" --data-urlencode "props=labels" --data-urlencode "languages=en" --data-urlencode "format=json" | jq -c '.entities|map_values(.labels.en.value)'
-echo "### MANGADEX rate/headers"
-curl -s -D - -o /dev/null -m 20 -A "$UA" "https://api.mangadex.org/ping" | grep -i -E "^(HTTP|x-ratelimit)"
+# Research round 4: which providers know web novels / light novels / obscure titles? (no key used)
+UA="ATracker-research/0.1"
+trim() { jq -c 'walk(if type=="string" and length>70 then .[0:70]+"…" else . end)' 2>/dev/null || head -c 600; }
+TITLES=("Reverend Insanity" "Lord of the Mysteries" "Omniscient Reader" "Overgeared" "The Beginning After the End" "Mushoku Tensei" "Re:Zero" "Shadow Slave")
+echo "### MANGABAKA (no key) search"
+for t in "${TITLES[@]}"; do echo "== $t"; curl -s -m 25 -w ' [HTTP %{http_code}]' -A "$UA" -G "https://api.mangabaka.org/v1/series" --data-urlencode "q=$t" --data-urlencode "limit=3" | head -c 1500; echo; done
+echo "### MANGABAKA rate headers"
+curl -s -D - -o /dev/null -m 20 -A "$UA" "https://api.mangabaka.org/v1/series?q=test&limit=1" | grep -i -E "^(HTTP|x-ratelimit|retry|content-type)"
+echo "### MANGAUPDATES official v1 search"
+for t in "${TITLES[@]}"; do echo "== $t"; curl -s -m 25 -w ' [HTTP %{http_code}]' -A "$UA" -H 'Content-Type: application/json' -d "{\"search\":\"$t\",\"perpage\":3}" "https://api.mangaupdates.com/v1/series/search" | jq -c '.results[]?.record|{series_id,title,type,year}' 2>/dev/null; echo; done
+echo "### KITSU manga search"
+for t in "Reverend Insanity" "Lord of the Mysteries" "Mushoku Tensei" "Shadow Slave"; do echo "== $t"; curl -s -m 25 -A "$UA" -G "https://kitsu.io/api/edge/manga" --data-urlencode "filter[text]=$t" --data-urlencode "page[limit]=3" | jq -c '.data[]?|{id,sub:.attributes.subtype,t:.attributes.canonicalTitle,ch:.attributes.chapterCount,vol:.attributes.volumeCount}' 2>/dev/null; done
+echo "### JIKAN manga search"
+for t in "Reverend Insanity" "Lord of the Mysteries" "Mushoku Tensei"; do echo "== $t"; curl -s -m 25 -w ' [HTTP %{http_code}]' -A "$UA" -G "https://api.jikan.moe/v4/manga" --data-urlencode "q=$t" --data-urlencode "limit=3" | jq -c '.data[]?|{id:.mal_id,type,t:.title}' 2>/dev/null; echo; sleep 1; done
+echo "### ANILIST novels (format NOVEL, no country)"
+for t in "Mushoku Tensei" "Lord of the Mysteries" "Shadow Slave" "Overgeared" "Reverend Insanity"; do echo "== $t"; curl -s -m 25 -A "$UA" -H 'Content-Type: application/json' -d "{\"query\":\"query(\$q:String){Page(perPage:3){media(search:\$q,type:MANGA){id format countryOfOrigin chapters volumes title{romaji english}}}}\",\"variables\":{\"q\":\"$t\"}}" https://graphql.anilist.co | jq -c '.data.Page.media'; done
+echo "### ANILIST user-list public query (profile idea): a public user's stats"
+curl -s -m 25 -A "$UA" -H 'Content-Type: application/json' -d '{"query":"{User(name:\"AniList\"){id name avatar{large} statistics{anime{count episodesWatched} manga{count chaptersRead}}}}"}' https://graphql.anilist.co | jq -c '.data'
