@@ -1,19 +1,20 @@
 #!/bin/bash
-# Research round 4: which providers know web novels / light novels / obscure titles? (no key used)
+# Research round 5: MAL feasibility + id mapping for imports.
 UA="ATracker-research/0.1"
-trim() { jq -c 'walk(if type=="string" and length>70 then .[0:70]+"…" else . end)' 2>/dev/null || head -c 600; }
-TITLES=("Reverend Insanity" "Lord of the Mysteries" "Omniscient Reader" "Overgeared" "The Beginning After the End" "Mushoku Tensei" "Re:Zero" "Shadow Slave")
-echo "### MANGABAKA (no key) search"
-for t in "${TITLES[@]}"; do echo "== $t"; curl -s -m 25 -w ' [HTTP %{http_code}]' -A "$UA" -G "https://api.mangabaka.org/v1/series" --data-urlencode "q=$t" --data-urlencode "limit=3" | head -c 1500; echo; done
-echo "### MANGABAKA rate headers"
-curl -s -D - -o /dev/null -m 20 -A "$UA" "https://api.mangabaka.org/v1/series?q=test&limit=1" | grep -i -E "^(HTTP|x-ratelimit|retry|content-type)"
-echo "### MANGAUPDATES official v1 search"
-for t in "${TITLES[@]}"; do echo "== $t"; curl -s -m 25 -w ' [HTTP %{http_code}]' -A "$UA" -H 'Content-Type: application/json' -d "{\"search\":\"$t\",\"perpage\":3}" "https://api.mangaupdates.com/v1/series/search" | jq -c '.results[]?.record|{series_id,title,type,year}' 2>/dev/null; echo; done
-echo "### KITSU manga search"
-for t in "Reverend Insanity" "Lord of the Mysteries" "Mushoku Tensei" "Shadow Slave"; do echo "== $t"; curl -s -m 25 -A "$UA" -G "https://kitsu.io/api/edge/manga" --data-urlencode "filter[text]=$t" --data-urlencode "page[limit]=3" | jq -c '.data[]?|{id,sub:.attributes.subtype,t:.attributes.canonicalTitle,ch:.attributes.chapterCount,vol:.attributes.volumeCount}' 2>/dev/null; done
-echo "### JIKAN manga search"
-for t in "Reverend Insanity" "Lord of the Mysteries" "Mushoku Tensei"; do echo "== $t"; curl -s -m 25 -w ' [HTTP %{http_code}]' -A "$UA" -G "https://api.jikan.moe/v4/manga" --data-urlencode "q=$t" --data-urlencode "limit=3" | jq -c '.data[]?|{id:.mal_id,type,t:.title}' 2>/dev/null; echo; sleep 1; done
-echo "### ANILIST novels (format NOVEL, no country)"
-for t in "Mushoku Tensei" "Lord of the Mysteries" "Shadow Slave" "Overgeared" "Reverend Insanity"; do echo "== $t"; curl -s -m 25 -A "$UA" -H 'Content-Type: application/json' -d "{\"query\":\"query(\$q:String){Page(perPage:3){media(search:\$q,type:MANGA){id format countryOfOrigin chapters volumes title{romaji english}}}}\",\"variables\":{\"q\":\"$t\"}}" https://graphql.anilist.co | jq -c '.data.Page.media'; done
-echo "### ANILIST user-list public query (profile idea): a public user's stats"
-curl -s -m 25 -A "$UA" -H 'Content-Type: application/json' -d '{"query":"{User(name:\"AniList\"){id name avatar{large} statistics{anime{count episodesWatched} manga{count chaptersRead}}}}"}' https://graphql.anilist.co | jq -c '.data'
+echo "### MAL API reachability, no credentials"
+curl -s -m 25 -w ' [HTTP %{http_code}]\n' -A "$UA" "https://api.myanimelist.net/v2/anime?q=naruto&limit=1" | head -c 400; echo
+echo "### MAL API with a bogus client id"
+curl -s -m 25 -w ' [HTTP %{http_code}]\n' -A "$UA" -H "X-MAL-CLIENT-ID: 00000000000000000000000000000000" "https://api.myanimelist.net/v2/anime?q=naruto&limit=1" | head -c 400; echo
+echo "### MAL OAuth authorize endpoint reachability"
+curl -s -m 25 -o /dev/null -w 'HTTP %{http_code}\n' -A "$UA" "https://myanimelist.net/v1/oauth2/authorize?response_type=code&client_id=x&code_challenge=$(printf 'a%.0s' {1..50})"
+echo "### MAL XML export / profile pages are not API; skip"
+echo "### ANILIST idMal batch lookup (resolve imported MAL ids to covers/metadata)"
+curl -s -m 25 -A "$UA" -H 'Content-Type: application/json' -d '{"query":"{A:Page(perPage:5){media(idMal_in:[1,5114,16498],type:ANIME){id idMal title{romaji} coverImage{large} episodes}} M:Page(perPage:5){media(idMal_in:[2,13,44347],type:MANGA){id idMal format countryOfOrigin title{romaji} coverImage{large} chapters volumes}}}"}' https://graphql.anilist.co | jq -c '.' | head -c 1800; echo
+echo "### MAL ids that AniList lacks (web novel?): Lord of the Mysteries novel MAL manga id?"
+curl -s -m 25 -A "$UA" -H 'Content-Type: application/json' -d '{"query":"{Page(perPage:5){media(idMal_in:[132663,114229],type:MANGA){id idMal format title{romaji}}}}"}' https://graphql.anilist.co | jq -c '.data' | head -c 600; echo
+echo "### ANILIST public list by username (alternative import)"
+curl -s -m 25 -A "$UA" -H 'Content-Type: application/json' -d '{"query":"{MediaListCollection(userName:\"Josh\",type:ANIME,status:COMPLETED,perChunk:2,chunk:1){hasNextChunk lists{name entries{status score(format:POINT_10) progress media{id idMal title{romaji}}}}}}"}' https://graphql.anilist.co | jq -c '.' | head -c 900; echo
+echo "### KITSU mapping from MAL manga id"
+curl -s -m 25 -A "$UA" -G "https://kitsu.io/api/edge/mappings" --data-urlencode "filter[externalSite]=myanimelist/manga" --data-urlencode "filter[externalId]=44347" --data-urlencode "include=item" | jq -c '{data:[.data[]?|{id,site:.attributes.externalSite,ext:.attributes.externalId}],inc:[.included[]?|{id,t:.attributes.canonicalTitle,sub:.attributes.subtype}]}' | head -c 600; echo
+echo "### KITSU can it be bulk-filtered by many MAL ids? (rate / limit)"
+curl -s -m 25 -D - -o /dev/null -A "$UA" "https://kitsu.io/api/edge/manga?page%5Blimit%5D=1" | grep -i -E "^(HTTP|x-ratelimit|retry)"
