@@ -6,7 +6,9 @@ import app.atracker.data.db.MediaEntity
 import app.atracker.data.provider.AniListProvider
 import app.atracker.data.provider.ApiHttp
 import app.atracker.data.provider.BrowseKind
+import app.atracker.data.provider.KitsuProvider
 import app.atracker.data.provider.MangaDexProvider
+import app.atracker.data.provider.MangaUpdatesProvider
 import app.atracker.data.provider.MetadataProvider
 import app.atracker.data.provider.RateLimiter
 import app.atracker.data.provider.WikidataProvider
@@ -175,6 +177,8 @@ class CatalogueRepository(
         fun defaultProviders(): List<MetadataProvider> = listOf(
             AniListProvider(ApiHttp(RateLimiter(2_200))),
             MangaDexProvider(ApiHttp(RateLimiter(300))),
+            KitsuProvider(ApiHttp(RateLimiter(400))),
+            MangaUpdatesProvider(ApiHttp(RateLimiter(500))),
             WikidataProvider(ApiHttp(RateLimiter(250)))
         )
     }

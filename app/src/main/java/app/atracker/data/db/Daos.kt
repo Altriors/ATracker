@@ -333,3 +333,17 @@ data class ReleaseRow(
     val id: Long, val mediaId: Long, val title: String, val mediaType: String,
     val kind: String, val number: Int?, val releaseAt: Long
 )
+
+@Dao
+interface ImportDao {
+    @Insert suspend fun insertRun(run: ImportRunEntity): Long
+    @Update suspend fun updateRun(run: ImportRunEntity)
+    @Insert suspend fun insertRecords(records: List<ImportRecordEntity>)
+    @Query("SELECT * FROM import_run ORDER BY startedAt DESC") fun observeRuns(): Flow<List<ImportRunEntity>>
+    @Query("SELECT * FROM import_run ORDER BY startedAt DESC") suspend fun observeRunsOnceForTest(): List<ImportRunEntity>
+    @Query("SELECT * FROM import_run WHERE id = :id") suspend fun getRun(id: Long): ImportRunEntity?
+    @Query("SELECT * FROM import_record WHERE runId = :runId ORDER BY id") fun observeRecords(runId: Long): Flow<List<ImportRecordEntity>>
+    @Query("SELECT * FROM import_record WHERE runId = :runId ORDER BY id") suspend fun recordsOnce(runId: Long): List<ImportRecordEntity>
+    @Query("UPDATE import_run SET status = 'FAILED', finishedAt = :now, message = 'Interrupted before it finished. Run the import again; nothing is duplicated.' WHERE status = 'RUNNING'")
+    suspend fun failInterrupted(now: Long)
+}

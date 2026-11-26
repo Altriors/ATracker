@@ -10,6 +10,7 @@ import androidx.room.RoomDatabase
  * the database holds the user's only copy of their progress):
  *   1 - initial schema
  *   2 - media_relation table (provider-reported relations, used for franchise suggestions)
+ *   3 - import_run / import_record tables (MyAnimeList import history)
  */
 @Database(
     entities = [
@@ -18,7 +19,7 @@ import androidx.room.RoomDatabase
         FranchiseEntity::class, FranchiseMemberEntity::class,
         LibraryEntryEntity::class, ActivityEventEntity::class,
         CustomListEntity::class, CustomListItemEntity::class, UserTagEntity::class, LibraryTagEntity::class,
-        AppSettingEntity::class
+        AppSettingEntity::class, ImportRunEntity::class, ImportRecordEntity::class
     ],
     version = AppDatabase.VERSION,
     exportSchema = true
@@ -31,10 +32,11 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun listDao(): ListDao
     abstract fun cacheDao(): CacheDao
     abstract fun settingDao(): SettingDao
+    abstract fun importDao(): ImportDao
 
     companion object {
         const val FILE_NAME = "atracker.db"
-        const val VERSION = 2
+        const val VERSION = 3
 
         @Volatile private var instance: AppDatabase? = null
 

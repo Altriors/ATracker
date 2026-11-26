@@ -74,6 +74,10 @@ object Providers {
     const val ANILIST = "anilist"
     const val JIKAN = "jikan"
     const val MANGADEX = "mangadex"
+    const val KITSU = "kitsu"
+    const val MANGAUPDATES = "mangaupdates"
+    /** MyAnimeList ids are namespaced "anime:ID" / "manga:ID" because the two id spaces overlap. */
+    const val MAL = "mal"
     const val WIKIDATA = "wikidata"
     const val MANUAL = "manual"
 }

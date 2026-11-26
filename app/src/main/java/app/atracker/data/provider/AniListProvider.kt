@@ -9,6 +9,7 @@ import app.atracker.domain.ProviderRelation
 import app.atracker.domain.Providers
 import app.atracker.domain.PublicationStatus
 import app.atracker.domain.ReleaseEvent
+import app.atracker.domain.SourceRef
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -76,6 +77,22 @@ class AniListProvider(
         val vars = buildJsonObject { put("id", idInt) }
         val root = post(DETAIL_QUERY, vars)
         return root["data"]["Media"].obj()?.let { parse(it) }
+    }
+
+    /**
+     * Looks up many titles by their MyAnimeList ids in one request (50 per call). Used by the MAL
+     * import so matching is by hard id, never by title. Ids AniList does not know are simply absent.
+     */
+    suspend fun lookupByMalIds(malIds: List<Int>, anime: Boolean): List<MediaMetadata> {
+        val out = ArrayList<MediaMetadata>()
+        for (chunk in malIds.distinct().chunked(50)) {
+            val vars = buildJsonObject {
+                put("ids", buildJsonArray { chunk.forEach { add(JsonPrimitive(it)) } })
+                put("type", if (anime) "ANIME" else "MANGA")
+            }
+            out += runPage(MAL_LOOKUP_QUERY, vars)
+        }
+        return out
     }
 
     private suspend fun runPage(query: String, vars: JsonObject): List<MediaMetadata> {
@@ -176,7 +193,10 @@ class AniListProvider(
             credits = credits,
             sourceUrl = m["siteUrl"].str(),
             relations = relations,
-            releases = releases
+            releases = releases,
+            crossRefs = m["idMal"].int()?.let {
+                listOf(SourceRef(Providers.MAL, (if (type == MediaType.ANIME) "anime:" else "manga:") + it))
+            }.orEmpty()
         )
     }
 
@@ -212,6 +232,15 @@ class AniListProvider(
             query(%type: MediaType, %country: CountryCode, %format: MediaFormat, %notFormat: MediaFormat, %statusNot: MediaStatus, %sort: [MediaSort], %page: Int) {
               Page(page: %page, perPage: 20) {
                 media(type: %type, countryOfOrigin: %country, format: %format, format_not: %notFormat, status_not: %statusNot, isAdult: false, sort: %sort) { ...M }
+              }
+            }"""
+        )
+
+        val MAL_LOOKUP_QUERY = gql(
+            FRAGMENT + """
+            query(%ids: [Int], %type: MediaType) {
+              Page(page: 1, perPage: 50) {
+                media(idMal_in: %ids, type: %type) { ...M }
               }
             }"""
         )

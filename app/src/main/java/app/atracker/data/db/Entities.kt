@@ -263,3 +263,43 @@ data class AppSettingEntity(
     @PrimaryKey val key: String,
     val value: String
 )
+
+// ---------------------------------------------------------------------------------------------
+// IMPORT HISTORY (schema 3). One run per import; one record per MyAnimeList entry in that run.
+// ---------------------------------------------------------------------------------------------
+
+@Entity(tableName = "import_run")
+data class ImportRunEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    /** MAL_API or MAL_XML */
+    val source: String,
+    val startedAt: Long,
+    val finishedAt: Long? = null,
+    /** RUNNING, DONE or FAILED. A RUNNING row older than the process means the import was interrupted. */
+    val status: String,
+    val policy: String,
+    val added: Int = 0,
+    val updated: Int = 0,
+    val skipped: Int = 0,
+    val unmatched: Int = 0,
+    val failed: Int = 0,
+    val message: String? = null
+)
+
+@Entity(
+    tableName = "import_record",
+    foreignKeys = [ForeignKey(ImportRunEntity::class, ["id"], ["runId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("runId")]
+)
+data class ImportRecordEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val runId: Long,
+    /** "anime" or "manga" */
+    val malKind: String,
+    val malId: Int?,
+    val title: String,
+    /** ADDED, UPDATED, SKIPPED, UNMATCHED, FAILED */
+    val outcome: String,
+    val detail: String? = null,
+    val mediaId: Long? = null
+)
