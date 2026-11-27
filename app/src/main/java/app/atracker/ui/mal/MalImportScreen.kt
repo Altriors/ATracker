@@ -48,6 +48,7 @@ import app.atracker.ATrackerApp
 import app.atracker.data.mal.ConflictPolicy
 import app.atracker.data.mal.MalAuth
 import app.atracker.data.mal.PlanAction
+import app.atracker.domain.MediaType
 import app.atracker.ui.common.formatDate
 import app.atracker.ui.common.vm
 
@@ -123,7 +124,7 @@ fun MalImportScreen(app: ATrackerApp, onBack: () -> Unit) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
                                     Text(it.record.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyLarge)
-                                    Text("${it.record.kind.key.replaceFirstChar { c -> c.uppercase() }} · ${it.record.status.label(app.atracker.domain.MediaType.ANIME)} · ${it.record.progress}" + (it.record.total?.let { t -> " / $t" } ?: "") + (it.record.score?.let { sc -> " · score $sc" } ?: ""), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("${it.record.kind.key.replaceFirstChar { c -> c.uppercase() }} · ${it.record.status.label(MediaType.ANIME)} · ${it.record.progress}" + (it.record.total?.let { t -> " / $t" } ?: "") + (it.record.score?.let { sc -> " · score $sc" } ?: ""), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Text(it.action.label + (it.meta?.let { m -> " (${m.provider}: ${m.title})" } ?: ""), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                                     if (it.differences.isNotEmpty()) Text(it.differences.joinToString("; "), style = MaterialTheme.typography.bodySmall)
                                 }
