@@ -46,8 +46,16 @@ class SmokeTest {
         }
     }
 
+    /** A fresh install shows first-run onboarding; choose the empty start like a new user would. */
+    private fun skipOnboarding() {
+        rule.waitUntil(15_000) { rule.onAllNodesWithText("Start with an empty library").fetchSemanticsNodes().isNotEmpty() }
+        rule.onNodeWithText("Start with an empty library").performClick()
+        rule.waitForIdle()
+    }
+
     private fun runFlow() {
         rule.waitForIdle()
+        skipOnboarding()
         rule.onNodeWithText("Welcome to ATracker").assertIsDisplayed()
         shot("01-home-empty")
 
@@ -111,6 +119,7 @@ class SmokeTest {
     fun liveSearchFindsKnownTitle() {
         try {
             rule.waitForIdle()
+            skipOnboarding()
             rule.onAllNodesWithText("Discover").onFirst().performClick()
             rule.onNodeWithText("Search anime, manga, manhwa, novels…").performTextInput("Naruto")
             rule.waitUntil(timeoutMillis = 90_000) {
