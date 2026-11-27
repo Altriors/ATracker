@@ -6,12 +6,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import kotlinx.coroutines.flow.first
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Home
@@ -82,13 +84,27 @@ class MainActivity : ComponentActivity() {
         setContent {
             val pref by app.database.settingDao().observe(KEY_THEME).collectAsState(initial = null)
             val dark = when (pref) { "dark" -> true; "light" -> false; else -> isSystemInDarkTheme() }
-            ATrackerTheme(darkTheme = dark) { AppRoot(app) }
+            ATrackerTheme(darkTheme = dark) {
+                // Existing libraries skip onboarding; only a fresh install with no data sees it.
+                var gate by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+                var openMal by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+                androidx.compose.runtime.LaunchedEffect(Unit) {
+                    val done = app.database.settingDao().get(app.atracker.ui.profile.KEY_ONBOARDED) != null
+                    val hasData = app.database.libraryDao().observeCount().first() > 0
+                    gate = if (done || hasData) "app" else "onboarding"
+                }
+                when (gate) {
+                    null -> androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
+                    "onboarding" -> app.atracker.ui.profile.OnboardingScreen(app, pref ?: "system") { mal -> openMal = mal; gate = "app" }
+                    else -> AppRoot(app, startOnMal = openMal)
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun AppRoot(app: ATrackerApp) {
+private fun AppRoot(app: ATrackerApp, startOnMal: Boolean = false) {
     val context = LocalContext.current
     fun restartApp() = context.restartApp()
     val nav = rememberNavController()
@@ -96,6 +112,7 @@ private fun AppRoot(app: ATrackerApp) {
     val route = backStack?.destination?.route
     val showBar = Tab.entries.any { it.route == route }
     val redirect by app.pendingMalRedirect.collectAsState()
+    androidx.compose.runtime.LaunchedEffect(startOnMal) { if (startOnMal) nav.navigate("mal") }
     androidx.compose.runtime.LaunchedEffect(redirect) { if (redirect != null && route != "mal") nav.navigate("mal") }
 
     fun goTab(tab: Tab) = nav.navigate(tab.route) {
