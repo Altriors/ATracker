@@ -44,6 +44,7 @@ import app.atracker.ui.discover.DiscoverScreen
 import app.atracker.ui.home.HomeScreen
 import app.atracker.ui.library.LibraryScreen
 import app.atracker.ui.manual.ManualEntryScreen
+import app.atracker.ui.mal.MalImportScreen
 import app.atracker.ui.settings.KEY_THEME
 import app.atracker.ui.settings.SettingsScreen
 import app.atracker.ui.stats.StatsScreen
@@ -60,10 +61,16 @@ private enum class Tab(val route: String, val label: String, val icon: ImageVect
 }
 
 class MainActivity : ComponentActivity() {
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        intent.data?.let { if (it.scheme == "atracker") (application as ATrackerApp).pendingMalRedirect.value = it }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val app = application as ATrackerApp
+        intent?.data?.let { if (it.scheme == "atracker") app.pendingMalRedirect.value = it }
         setContent {
             val pref by app.database.settingDao().observe(KEY_THEME).collectAsState(initial = null)
             val dark = when (pref) { "dark" -> true; "light" -> false; else -> isSystemInDarkTheme() }
@@ -80,6 +87,8 @@ private fun AppRoot(app: ATrackerApp) {
     val backStack by nav.currentBackStackEntryAsState()
     val route = backStack?.destination?.route
     val showBar = Tab.entries.any { it.route == route }
+    val redirect by app.pendingMalRedirect.collectAsState()
+    androidx.compose.runtime.LaunchedEffect(redirect) { if (redirect != null && route != "mal") nav.navigate("mal") }
 
     fun goTab(tab: Tab) = nav.navigate(tab.route) {
         popUpTo(nav.graph.findStartDestination().id) { saveState = true }
@@ -111,7 +120,8 @@ private fun AppRoot(app: ATrackerApp) {
             composable(Tab.DISCOVER.route) { DiscoverScreen(app, ::openDetail, ::openManual) }
             composable(Tab.LIBRARY.route) { LibraryScreen(app, ::openDetail, onDiscover = { goTab(Tab.DISCOVER) }, onFranchises = { nav.navigate("franchises") }, onCalendar = { nav.navigate("calendar") }) }
             composable(Tab.STATS.route) { StatsScreen(app, ::openDetail) }
-            composable(Tab.SETTINGS.route) { SettingsScreen(app, onRestart = ::restartApp) }
+            composable(Tab.SETTINGS.route) { SettingsScreen(app, onRestart = ::restartApp, onOpenMal = { nav.navigate("mal") }) }
+            composable("mal") { MalImportScreen(app, onBack = { nav.popBackStack() }) }
             composable("detail/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
                 val id = entry.arguments?.getLong("id") ?: return@composable
                 DetailScreen(

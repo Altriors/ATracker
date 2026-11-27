@@ -136,7 +136,7 @@ class SettingsViewModel(private val app: ATrackerApp) : ViewModel() {
 }
 
 @Composable
-fun SettingsScreen(app: ATrackerApp, onRestart: () -> Unit) {
+fun SettingsScreen(app: ATrackerApp, onRestart: () -> Unit, onOpenMal: () -> Unit) {
     val model = vm { SettingsViewModel(app) }
     val theme by model.theme.collectAsState()
     val folder by model.autoFolder.collectAsState()
@@ -152,7 +152,6 @@ fun SettingsScreen(app: ATrackerApp, onRestart: () -> Unit) {
     val jsonLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { it?.let { u -> model.writeText(u, false) } }
     val csvLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { it?.let { u -> model.writeText(u, true) } }
     val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { confirmRestore = it }
-    val malLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { it?.let(model::importMal) }
     val folderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
             app.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
@@ -219,9 +218,9 @@ fun SettingsScreen(app: ATrackerApp, onRestart: () -> Unit) {
         Section("Export and import") {
             OutlinedButton(onClick = { jsonLauncher.launch("atracker-export.json") }, Modifier.fillMaxWidth()) { Text("Export as JSON (library + history)") }
             OutlinedButton(onClick = { csvLauncher.launch("atracker-library.csv") }, Modifier.fillMaxWidth()) { Text("Export library as CSV") }
-            OutlinedButton(onClick = { malLauncher.launch(arrayOf("text/xml", "application/xml", "application/octet-stream", "*/*")) }, Modifier.fillMaxWidth()) { Text("Import from MyAnimeList (XML)…") }
+            OutlinedButton(onClick = onOpenMal, modifier = Modifier.fillMaxWidth()) { Text("MyAnimeList: connect, import, history…") }
             Text(
-                "MyAnimeList: export your list from myanimelist.net (Profile → Export), unzip it, and pick the .xml file. Titles already in your library are never overwritten.",
+                "Import from your MyAnimeList account or an export file. You see a preview first, and nothing you already track is overwritten unless you choose it.",
                 style = MaterialTheme.typography.bodySmall
             )
         }
