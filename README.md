@@ -31,3 +31,7 @@ Always-current APK (rebuilt on every push to `main`):
 
 JDK 17 + Android SDK: `./gradlew testDebugUnitTest assembleDebug`.
 CI runs unit tests and builds on every meaningful push; the emulator UI test runs on `workflow_dispatch` or a commit message containing `[emulator]`.
+
+
+## More
+Install, MyAnimeList setup, source coverage and known limitations: [docs/SETUP_AND_LIMITATIONS.md](docs/SETUP_AND_LIMITATIONS.md)
