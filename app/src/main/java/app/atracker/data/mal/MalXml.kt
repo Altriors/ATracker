@@ -55,7 +55,7 @@ object MalXml {
     fun mapStatus(raw: String?): LibraryStatus = when (raw?.trim()?.lowercase()) {
         "watching", "reading", "1" -> LibraryStatus.CURRENT
         "completed", "2" -> LibraryStatus.COMPLETED
-        "on-hold", "on hold", "onhold", "3" -> LibraryStatus.ON_HOLD
+        "on-hold", "on hold", "on_hold", "onhold", "3" -> LibraryStatus.ON_HOLD
         "dropped", "4" -> LibraryStatus.DROPPED
         "plan to watch", "plan to read", "plan_to_watch", "plan_to_read", "6" -> LibraryStatus.PLANNED
         else -> LibraryStatus.PLANNED
