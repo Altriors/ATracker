@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -59,6 +60,8 @@ fun DiscoverScreen(app: ATrackerApp, onOpen: (Long) -> Unit, onManual: (String) 
     val state by model.state.collectAsState()
     val scope = rememberCoroutineScope()
     var openError by remember { mutableStateOf<String?>(null) }
+    var addedMessage by remember { mutableStateOf<String?>(null) }
+    val history by model.history.collectAsState()
 
     LazyColumn(Modifier.fillMaxSize().testTag("discover-list"), contentPadding = PaddingValues(bottom = 24.dp)) {
         item {
@@ -78,6 +81,17 @@ fun DiscoverScreen(app: ATrackerApp, onOpen: (Long) -> Unit, onManual: (String) 
                 item { FilterChip(selected = state.type == null, onClick = { model.setType(null) }, label = { Text("All") }) }
                 items(MediaType.entries.toList()) { t ->
                     FilterChip(selected = state.type == t, onClick = { model.setType(t) }, label = { Text(t.label) })
+                }
+            }
+        }
+        if (state.query.isBlank() && history.isNotEmpty()) {
+            item {
+                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Recent searches", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                    androidx.compose.material3.TextButton(onClick = model::clearHistory) { Text("Clear") }
+                }
+                LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(history) { h -> androidx.compose.material3.AssistChip(onClick = { model.useHistory(h) }, label = { Text(h) }) }
                 }
             }
         }
@@ -110,6 +124,7 @@ fun DiscoverScreen(app: ATrackerApp, onOpen: (Long) -> Unit, onManual: (String) 
                 Row(Modifier.fillMaxWidth().padding(24.dp), horizontalArrangement = Arrangement.Center) { CircularProgressIndicator() }
             }
         }
+        addedMessage?.let { item { Text(it, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) } }
         openError?.let { item { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp)) } }
 
         val raw = state.outcome
@@ -124,7 +139,16 @@ fun DiscoverScreen(app: ATrackerApp, onOpen: (Long) -> Unit, onManual: (String) 
             if (outcome.remote.isNotEmpty()) {
                 item { SectionTitle(if (state.query.isBlank()) "Online" else "Online results") }
                 items(outcome.remote, key = { "r${it.provider}${it.externalId}" }) { m ->
-                    MediaRow(m.title, m.subtitle(), m.coverUrl, badge = "via ${providerName(m.provider)}") {
+                    MediaRow(m.title, m.subtitle(), m.coverUrl, badge = "via ${providerName(m.provider)}", trailing = {
+                        androidx.compose.material3.IconButton(onClick = {
+                            scope.launch {
+                                try {
+                                    val added = model.addToLibrary(m)
+                                    addedMessage = if (added) "Added “${m.title}” to your library." else "“${m.title}” is already in your library."
+                                } catch (e: Exception) { openError = "Could not add title: ${e.message}" }
+                            }
+                        }) { Icon(Icons.Filled.Add, contentDescription = "Add ${m.title} to library") }
+                    }) {
                         scope.launch {
                             openError = null
                             try {

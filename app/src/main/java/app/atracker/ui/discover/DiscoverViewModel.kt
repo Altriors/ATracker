@@ -5,6 +5,10 @@ import androidx.lifecycle.viewModelScope
 import app.atracker.ATrackerApp
 import app.atracker.data.DiscoverFilters
 import app.atracker.data.SearchOutcome
+import app.atracker.data.db.AppSettingEntity
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import app.atracker.data.provider.BrowseKind
 import app.atracker.domain.MediaMetadata
 import app.atracker.domain.MediaType
@@ -29,6 +33,37 @@ class DiscoverViewModel(private val app: ATrackerApp) : ViewModel() {
     private val _state = MutableStateFlow(DiscoverState())
     val state: StateFlow<DiscoverState> = _state.asStateFlow()
     private var job: Job? = null
+
+    /** Most recent searches first, newest-first, at most [MAX_HISTORY]. Stored in the database so backups keep them. */
+    val history: StateFlow<List<String>> = app.database.settingDao().observe(KEY_HISTORY)
+        .map { raw -> raw?.split('\n')?.filter { it.isNotBlank() }.orEmpty() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private fun remember(q: String) {
+        val clean = q.trim()
+        if (clean.length < 2) return
+        viewModelScope.launch {
+            val dao = app.database.settingDao()
+            val old = dao.get(KEY_HISTORY)?.split('\n')?.filter { it.isNotBlank() }.orEmpty()
+            val next = (listOf(clean) + old.filter { !it.equals(clean, ignoreCase = true) }).take(MAX_HISTORY)
+            dao.put(AppSettingEntity(KEY_HISTORY, next.joinToString("\n")))
+        }
+    }
+
+    fun clearHistory() { viewModelScope.launch { app.database.settingDao().put(AppSettingEntity(KEY_HISTORY, "")) } }
+    fun removeFromHistory(q: String) { viewModelScope.launch {
+        val dao = app.database.settingDao()
+        dao.put(AppSettingEntity(KEY_HISTORY, dao.get(KEY_HISTORY).orEmpty().split('\n').filter { it != q }.joinToString("\n")))
+    } }
+    fun useHistory(q: String) { _state.update { it.copy(query = q) }; submit() }
+
+    /** Adds a discovered title straight to the library. Returns false when it was already there. */
+    suspend fun addToLibrary(meta: MediaMetadata): Boolean {
+        val id = open(meta)
+        return app.libraryRepository.addToLibrary(id)
+    }
+
+    companion object { const val KEY_HISTORY = "search_history"; const val MAX_HISTORY = 15 }
 
     init { reload() }
 
@@ -61,6 +96,7 @@ class DiscoverViewModel(private val app: ATrackerApp) : ViewModel() {
             try {
                 val out = if (s.query.isBlank()) repo.browse(s.kind, s.type!!) else repo.search(s.query, s.type)
                 _state.update { it.copy(loading = false, outcome = out) }
+                if (s.query.isNotBlank() && out.remote.isNotEmpty()) remember(s.query)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
