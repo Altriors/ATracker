@@ -160,7 +160,6 @@ fun SettingsScreen(app: ATrackerApp, onRestart: () -> Unit, onOpenMal: () -> Uni
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Settings", style = MaterialTheme.typography.headlineSmall)
 
         Section("Appearance") {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -124,7 +124,6 @@ fun StatsScreen(app: ATrackerApp, onOpenTitle: (Long) -> Unit) {
         return
     }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
-        item { Text("Statistics", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(16.dp, 16.dp, 16.dp, 4.dp)) }
         item {
             Text(
                 "${s.totalTitles} titles · ${s.favorites} favourites" + (s.averageRating?.let { " · average rating ${fmt(it)}/10" } ?: ""),

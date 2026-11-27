@@ -6,7 +6,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -44,6 +47,8 @@ import app.atracker.ui.discover.DiscoverScreen
 import app.atracker.ui.home.HomeScreen
 import app.atracker.ui.library.LibraryScreen
 import app.atracker.ui.manual.ManualEntryScreen
+import app.atracker.ui.profile.Avatar
+import app.atracker.ui.profile.ProfileScreen
 import app.atracker.ui.mal.MalImportScreen
 import app.atracker.ui.settings.KEY_THEME
 import app.atracker.ui.settings.SettingsScreen
@@ -98,8 +103,29 @@ private fun AppRoot(app: ATrackerApp) {
     fun openDetail(id: Long) = nav.navigate("detail/$id")
     fun openManual(title: String) = nav.navigate("manual?title=${URLEncoder.encode(title, "UTF-8")}&id=-1")
 
+    var menuOpen by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val currentTab = Tab.entries.firstOrNull { it.route == route }
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            if (currentTab != null) {
+                androidx.compose.foundation.layout.Row(
+                    Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    Text(currentTab.label, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+                    androidx.compose.foundation.layout.Box {
+                        Avatar(app, 40.dp, Modifier.clickable(onClickLabel = "Open profile menu") { menuOpen = true })
+                        androidx.compose.material3.DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            androidx.compose.material3.DropdownMenuItem(text = { Text("Profile") }, onClick = { menuOpen = false; nav.navigate("profile") })
+                            androidx.compose.material3.DropdownMenuItem(text = { Text("Statistics") }, onClick = { menuOpen = false; goTab(Tab.STATS) })
+                            androidx.compose.material3.DropdownMenuItem(text = { Text("MyAnimeList import") }, onClick = { menuOpen = false; nav.navigate("mal") })
+                            androidx.compose.material3.DropdownMenuItem(text = { Text("Settings") }, onClick = { menuOpen = false; goTab(Tab.SETTINGS) })
+                        }
+                    }
+                }
+            }
+        },
         bottomBar = {
             if (showBar) {
                 NavigationBar {
@@ -121,6 +147,7 @@ private fun AppRoot(app: ATrackerApp) {
             composable(Tab.LIBRARY.route) { LibraryScreen(app, ::openDetail, onDiscover = { goTab(Tab.DISCOVER) }, onFranchises = { nav.navigate("franchises") }, onCalendar = { nav.navigate("calendar") }) }
             composable(Tab.STATS.route) { StatsScreen(app, ::openDetail) }
             composable(Tab.SETTINGS.route) { SettingsScreen(app, onRestart = ::restartApp, onOpenMal = { nav.navigate("mal") }) }
+            composable("profile") { ProfileScreen(app, onBack = { nav.popBackStack() }, onSettings = { goTab(Tab.SETTINGS) }, onMal = { nav.navigate("mal") }, onStats = { goTab(Tab.STATS) }) }
             composable("mal") { MalImportScreen(app, onBack = { nav.popBackStack() }) }
             composable("detail/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
                 val id = entry.arguments?.getLong("id") ?: return@composable
