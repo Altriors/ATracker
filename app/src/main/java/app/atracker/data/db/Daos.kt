@@ -16,6 +16,8 @@ data class LibraryItem(
     @Relation(parentColumn = "mediaId", entityColumn = "id") val media: MediaEntity
 )
 
+data class ListSummary(val id: Long, val name: String, val count: Int)
+
 data class MediaSourceRef(val provider: String, val externalId: String)
 
 data class FranchiseMemberRow(
@@ -288,6 +290,21 @@ interface ListDao {
 
     @Query("SELECT mediaId FROM custom_list_item WHERE listId = :listId ORDER BY position, addedAt")
     fun observeItemIds(listId: Long): Flow<List<Long>>
+
+    @Query("UPDATE custom_list SET name = :name WHERE id = :id")
+    suspend fun renameList(id: Long, name: String)
+
+    @Query("SELECT l.id AS id, l.name AS name, (SELECT COUNT(*) FROM custom_list_item i WHERE i.listId = l.id) AS count FROM custom_list l ORDER BY l.name COLLATE NOCASE")
+    fun observeSummaries(): Flow<List<ListSummary>>
+
+    @Query("SELECT m.* FROM media m JOIN custom_list_item i ON i.mediaId = m.id WHERE i.listId = :listId ORDER BY i.addedAt DESC")
+    fun observeMedia(listId: Long): Flow<List<MediaEntity>>
+
+    @Query("SELECT listId FROM custom_list_item WHERE mediaId = :mediaId")
+    fun observeListIdsFor(mediaId: Long): Flow<List<Long>>
+
+    @Query("SELECT * FROM custom_list WHERE id = :id")
+    fun observeList(id: Long): Flow<CustomListEntity?>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTag(tag: UserTagEntity): Long

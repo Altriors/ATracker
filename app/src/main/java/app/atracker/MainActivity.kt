@@ -51,6 +51,8 @@ import app.atracker.ui.manual.ManualEntryScreen
 import app.atracker.ui.profile.Avatar
 import app.atracker.ui.profile.ProfileScreen
 import app.atracker.ui.mal.MalImportScreen
+import app.atracker.ui.lists.ListScreen
+import app.atracker.ui.lists.ListsScreen
 import app.atracker.ui.settings.KEY_THEME
 import app.atracker.ui.settings.SettingsScreen
 import app.atracker.ui.stats.StatsScreen
@@ -119,6 +121,7 @@ private fun AppRoot(app: ATrackerApp) {
                         Avatar(app, 40.dp, Modifier.clickable(onClickLabel = "Open profile menu") { menuOpen = true })
                         androidx.compose.material3.DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                             androidx.compose.material3.DropdownMenuItem(text = { Text("Profile") }, onClick = { menuOpen = false; nav.navigate("profile") })
+                            androidx.compose.material3.DropdownMenuItem(text = { Text("Custom lists") }, onClick = { menuOpen = false; nav.navigate("lists") })
                             androidx.compose.material3.DropdownMenuItem(text = { Text("Statistics") }, onClick = { menuOpen = false; goTab(Tab.STATS) })
                             androidx.compose.material3.DropdownMenuItem(text = { Text("MyAnimeList import") }, onClick = { menuOpen = false; nav.navigate("mal") })
                             androidx.compose.material3.DropdownMenuItem(text = { Text("Settings") }, onClick = { menuOpen = false; goTab(Tab.SETTINGS) })
@@ -149,6 +152,11 @@ private fun AppRoot(app: ATrackerApp) {
             composable(Tab.STATS.route) { StatsScreen(app, ::openDetail) }
             composable(Tab.SETTINGS.route) { SettingsScreen(app, onRestart = ::restartApp, onOpenMal = { nav.navigate("mal") }) }
             composable("profile") { ProfileScreen(app, onBack = { nav.popBackStack() }, onSettings = { goTab(Tab.SETTINGS) }, onMal = { nav.navigate("mal") }, onStats = { goTab(Tab.STATS) }) }
+            composable("lists") { ListsScreen(app, onBack = { nav.popBackStack() }, onOpen = { nav.navigate("list/$it") }) }
+            composable("list/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
+                val id = entry.arguments?.getLong("id") ?: return@composable
+                ListScreen(app, id, onBack = { nav.popBackStack() }, onOpenTitle = ::openDetail)
+            }
             composable("mal") { MalImportScreen(app, onBack = { nav.popBackStack() }) }
             composable("detail/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
                 val id = entry.arguments?.getLong("id") ?: return@composable

@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Refresh
@@ -101,6 +102,9 @@ fun DetailScreen(
                         if (refreshing) CircularProgressIndicator(Modifier.size(24.dp).padding(2.dp))
                         else IconButton(onClick = model::refresh) { Icon(Icons.Filled.Refresh, "Refresh metadata") }
                     }
+                    var listDialog by remember { mutableStateOf(false) }
+                    IconButton(onClick = { listDialog = true }) { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, "Add to a list") }
+                    if (listDialog) app.atracker.ui.lists.AddToListDialog(app, mediaId) { listDialog = false }
                     if (entry != null) {
                         IconButton(onClick = { model.setFavorite(!(entry?.favorite ?: false)) }) {
                             Icon(if (entry?.favorite == true) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder, "Favourite")
