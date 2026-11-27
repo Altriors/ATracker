@@ -53,6 +53,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.atracker.ATrackerApp
+import app.atracker.ui.lists.AddToListDialog
 import app.atracker.data.db.LibraryEntryEntity
 import app.atracker.data.db.MediaEntity
 import app.atracker.data.trackedTotal
@@ -104,7 +105,7 @@ fun DetailScreen(
                     }
                     var listDialog by remember { mutableStateOf(false) }
                     IconButton(onClick = { listDialog = true }) { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, "Add to a list") }
-                    if (listDialog) app.atracker.ui.lists.AddToListDialog(app, mediaId) { listDialog = false }
+                    if (listDialog) AddToListDialog(app, mediaId) { listDialog = false }
                     if (entry != null) {
                         IconButton(onClick = { model.setFavorite(!(entry?.favorite ?: false)) }) {
                             Icon(if (entry?.favorite == true) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder, "Favourite")
