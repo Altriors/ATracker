@@ -48,8 +48,12 @@ class SmokeTest {
 
     /** A fresh install shows first-run onboarding; choose the empty start like a new user would. */
     private fun skipOnboarding() {
-        rule.waitUntil(15_000) { rule.onAllNodesWithText("Start with an empty library").fetchSemanticsNodes().isNotEmpty() }
-        rule.onNodeWithText("Start with an empty library").performClick()
+        // The app data persists between tests in one run, so onboarding only appears for the first one.
+        val shown = try {
+            rule.waitUntil(8_000) { rule.onAllNodesWithText("Start with an empty library").fetchSemanticsNodes().isNotEmpty() }
+            true
+        } catch (e: androidx.compose.ui.test.ComposeTimeoutException) { false }
+        if (shown) rule.onNodeWithText("Start with an empty library").performClick()
         rule.waitForIdle()
     }
 
