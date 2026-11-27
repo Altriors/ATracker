@@ -51,6 +51,8 @@ import app.atracker.ui.home.HomeScreen
 import app.atracker.ui.library.LibraryScreen
 import app.atracker.ui.manual.ManualEntryScreen
 import app.atracker.ui.profile.Avatar
+import app.atracker.ui.profile.KEY_ONBOARDED
+import app.atracker.ui.profile.OnboardingScreen
 import app.atracker.ui.profile.ProfileScreen
 import app.atracker.ui.mal.MalImportScreen
 import app.atracker.ui.lists.ListScreen
@@ -89,13 +91,13 @@ class MainActivity : ComponentActivity() {
                 var gate by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
                 var openMal by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
                 androidx.compose.runtime.LaunchedEffect(Unit) {
-                    val done = app.database.settingDao().get(app.atracker.ui.profile.KEY_ONBOARDED) != null
+                    val done = app.database.settingDao().get(KEY_ONBOARDED) != null
                     val hasData = app.database.libraryDao().observeCount().first() > 0
                     gate = if (done || hasData) "app" else "onboarding"
                 }
                 when (gate) {
                     null -> androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
-                    "onboarding" -> app.atracker.ui.profile.OnboardingScreen(app, pref ?: "system") { mal -> openMal = mal; gate = "app" }
+                    "onboarding" -> OnboardingScreen(app, pref ?: "system") { mal -> openMal = mal; gate = "app" }
                     else -> AppRoot(app, startOnMal = openMal)
                 }
             }
