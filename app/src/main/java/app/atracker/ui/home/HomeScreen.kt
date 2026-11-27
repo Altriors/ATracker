@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -63,17 +65,15 @@ fun HomeScreen(app: ATrackerApp, onOpen: (Long) -> Unit, onDiscover: () -> Unit)
     }
 
     val current = items.filter { it.entry.status == LibraryStatus.CURRENT.name }.sortedByDescending { it.entry.lastActivityAt ?: it.entry.updatedAt }
-    val watching = current.filter { MediaType.from(it.media.mediaType).isWatching }
-    val reading = current.filter { !MediaType.from(it.media.mediaType).isWatching }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
-        if (watching.isNotEmpty()) {
-            item { Header("Continue watching") }
-            items(watching.take(8), key = { "w${it.media.id}" }) { QuickRow(it, onOpen, model::plusOne) }
-        }
-        if (reading.isNotEmpty()) {
-            item { Header("Continue reading") }
-            items(reading.take(8), key = { "r${it.media.id}" }) { QuickRow(it, onOpen, model::plusOne) }
+        if (current.isNotEmpty()) {
+            item { Header("Continue") }
+            item {
+                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(current.take(12), key = { "c${it.media.id}" }) { ContinueCard(it, onOpen, model::plusOne) }
+                }
+            }
         }
         item { Header("Recently updated") }
         item { Shelf(items.sortedByDescending { it.entry.updatedAt }.take(12), onOpen) }
@@ -90,6 +90,21 @@ fun HomeScreen(app: ATrackerApp, onOpen: (Long) -> Unit, onDiscover: () -> Unit)
 @Composable
 private fun Header(text: String) {
     Text(text, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(16.dp, 20.dp, 16.dp, 6.dp))
+}
+
+@Composable
+private fun ContinueCard(item: LibraryItem, onOpen: (Long) -> Unit, plusOne: (Long) -> Unit) {
+    val type = MediaType.from(item.media.mediaType)
+    val total = item.media.trackedTotal()
+    Column(Modifier.width(158.dp)) {
+        Cover(item.media.coverUrl, Modifier.fillMaxWidth().height(224.dp).clickable { onOpen(item.media.id) }, corner = 14.dp)
+        Text(item.media.title, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+        androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Text(progressText(item.entry.progress, total, type.progressUnit), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+            androidx.compose.material3.FilledIconButton(onClick = { plusOne(item.media.id) }, modifier = Modifier.size(36.dp)) { Icon(Icons.Filled.Add, "Add one ${type.progressUnit.singular} to ${item.media.title}") }
+        }
+        if (total != null && total > 0) androidx.compose.material3.LinearProgressIndicator(progress = { (item.entry.progress.toFloat() / total).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
+    }
 }
 
 @Composable
