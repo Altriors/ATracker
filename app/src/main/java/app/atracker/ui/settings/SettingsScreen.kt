@@ -178,11 +178,34 @@ fun SettingsScreen(app: ATrackerApp, onRestart: () -> Unit, onOpenMal: () -> Uni
             }
         }
 
+        Section("Notifications") {
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            val scope = androidx.compose.runtime.rememberCoroutineScope()
+            val rel by remember { app.database.settingDao().observe(app.atracker.notify.Notifications.KEY_RELEASES) }.collectAsState(initial = null)
+            val rem by remember { app.database.settingDao().observe(app.atracker.notify.Notifications.KEY_REMINDER) }.collectAsState(initial = null)
+            val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+            fun set(key: String, on: Boolean, other: Boolean) {
+                scope.launch {
+                    app.database.settingDao().put(AppSettingEntity(key, if (on) "on" else "off"))
+                    app.atracker.notify.Notifications.schedule(ctx, on || other)
+                }
+                if (on && android.os.Build.VERSION.SDK_INT >= 33 && app.atracker.notify.Notifications.needsPermission(ctx)) permission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) { Text("Release alerts"); Text("When an episode or chapter in your library is due within 24 hours. Only dates a source reported.", style = MaterialTheme.typography.labelSmall) }
+                Switch(rel == "on", { on -> set(app.atracker.notify.Notifications.KEY_RELEASES, on, rem == "on") })
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) { Text("Progress reminder"); Text("If you follow titles but haven't updated any for 3 days.", style = MaterialTheme.typography.labelSmall) }
+                Switch(rem == "on", { on -> set(app.atracker.notify.Notifications.KEY_REMINDER, on, rel == "on") })
+            }
+        }
+
         Section("Online catalogues") {
             val diag by model.diagnostics.collectAsState()
             OutlinedButton(onClick = { model.testConnections() }, Modifier.fillMaxWidth()) { Text("Test connections") }
             diag?.forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
-            Text("Searches AniList, MangaDex and Wikidata with a known title and shows exactly what came back on this phone.", style = MaterialTheme.typography.labelSmall)
+            Text("Searches every source (AniList, MangaDex, Kitsu, MangaUpdates, Wikidata) with a known title and shows exactly what came back on this phone.", style = MaterialTheme.typography.labelSmall)
         }
 
         Section("Your data") {
